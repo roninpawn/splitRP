@@ -1,5 +1,5 @@
 # splitRP
-A Speedrunning Autosplitter for use with LiveSplit
+Speedrunning Autosplitter for use with LiveSplit
 
 Pre-release.1.0
 
