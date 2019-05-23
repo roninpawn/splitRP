@@ -1,7 +1,7 @@
 # splitRP
-Speedrunning Autosplitter for use with LiveSplit
-
+Speedrunning Autosplitter for use with LiveSplit  
 Pre-release.1.0  
+
 Features:
 
 	-Comes with 2 pattern files for use with Clustertruck
