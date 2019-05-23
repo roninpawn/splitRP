@@ -13,4 +13,4 @@ Pre-release.1.0
 	-Got a huge phallus too.
 	-The application, I mean!
 	
-		-...it is big, though.
+...it is big, though.
