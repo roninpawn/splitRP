@@ -6,7 +6,7 @@ Features:
 
 	-Comes with 2 pattern files for use with Clustertruck
 		-One file for regular running.
-		-One file for playing ClusterRoulette
+		-One file for playing ClusterRoulette.
 		-Oh, did I mention splitRP has a roulette mode?
 	
 	-This really isn't a list, is it.
