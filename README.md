@@ -5,7 +5,7 @@ Pre-release.1.0
 Features:
 
 	-Comes with 2 pattern files for use with Clustertruck
-		-One flie for regular running.
+		-One file for regular running.
 		-One file for playing ClusterRoulette
 		-Oh, did I mention splitRP has a roulette mode?
 	
