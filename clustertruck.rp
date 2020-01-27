@@ -1,0 +1,67 @@
+[Settings]
+ScreenshotArea = 353:136,560:825
+ImagePacks = Menu, Level Select, Level Complete
+Tests = Pre Run, Run Start, Split Test
+FirstTest = Run Start
+
+
+# --Image Packs--
+
+[Sample Image Pack]
+Directory = subfolder       # resolves to 'splitRP/images/subfolder'
+Images = image.png|image2.png|image3.png
+Match = 90                  # Percent of minimum similarity to match on
+Unmatch = 85                # Percent, below which, to release the match
+
+[Menu]
+Directory = Clustertruck
+Images = menu1.png
+Match = 100
+Unmatch = 76
+
+[Level Select]
+Directory = Clustertruck
+Images = select1.png|select2.png
+Match = 86
+Unmatch = 85
+
+[Level Complete]
+Directory = Clustertruck
+Images = lc1.png | lc2_91.5.png | lc3_91.5.png | lc4_93.png | lc5_93.png | lc6_94.png | lc7_94.3.png
+Match = 93.5
+Unmatch = 90
+
+
+# -- Tests --
+
+[Sample Test]
+ImagePacks = Sample Image Pack, Another Pack, Etc
+MatchSend = pausegametime\r\nsplit\r\n
+UnMatch = Test to try on Unmatch
+NoMatch = Test to fall through to if Unmatch fails
+NoMatchSend = unpausegametime\r\n
+Crop = x : y, width : height
+Resize = .2                 # 20% of original
+Color = 6                   # 6 = convert to grayscale
+
+[Pre Run]
+ImagePacks = Menu
+UnMatch = Run Start
+NoMatch = Run Start
+Resize = .2
+Color = 6
+
+[Run Start]
+ImagePacks = Level Select
+UnMatch = Pre Run
+NoMatch = Split Test
+NoMatchSend = setgametime 0.0\r\nstarttimer\r\n
+Resize = .2
+Color = 6
+
+[Split Test]
+ImagePacks = Level Complete
+MatchSend = pausegametime\r\nsplit\r\n
+NoMatchSend = unpausegametime\r\n
+Resize = .2
+Color = 6
