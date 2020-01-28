@@ -121,8 +121,10 @@ class FileAccess:
 
     def build_test(self, name):
         packs = [self.packs[s.strip()] for s in self.cfg[name]["ImagePacks"].strip().split(",")]
-        match_send = self.cfg[name]["MatchSend"].strip() if "MatchSend" in self.cfg[name].keys() else ""
-        nomatch_send = self.cfg[name]["NoMatchSend"].strip() if "NoMatchSend" in self.cfg[name].keys() else ""
+        match_send = self.cfg[name]["MatchSend"].strip().replace("\\r\\n", "\r\n")\
+            if "MatchSend" in self.cfg[name].keys() else ''
+        nomatch_send = self.cfg[name]["NoMatchSend"].strip().replace("\\r\\n", "\r\n")\
+            if "NoMatchSend" in self.cfg[name].keys() else ''
         unmatch = self.cfg[name]["UnMatch"].strip() if "UnMatch" in self.cfg[name].keys() else None
         nomatch = self.cfg[name]["NoMatch"].strip() if "NoMatch" in self.cfg[name].keys() else None
         if "Crop" in self.cfg[name].keys():

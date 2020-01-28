@@ -7,6 +7,37 @@ import keyboard
 from file_handling import *
 
 
+#   ~~~Define Public Functions~~~
+def showImage(img, wait=0):
+    cv2.imshow("imgWin", img)
+    cv2.moveWindow("imgWin", 0, 0)  # Move it to (40,30)
+    cv2.waitKey(wait)
+    cv2.destroyAllWindows()
+
+
+def compare(image_list, screenshot, match=True, compare_all=False):
+    best, worst = 0, 100
+    found = False
+
+    for img in image_list:
+        composite = cv2.absdiff(img[0], screenshot)  # Composite images into difference map.
+        shape = np.shape(composite)  # [Pixel height, width, (color channels)]
+        color_channels = 1 if len(shape) == 2 else shape[2]
+        # depth needs to be resolved based on data type? (uint8 = 255, float = 1?)
+        depth = 255
+
+        similarity = 100 * (1 - ((np.sum(composite) / depth) / (shape[0] * shape[1] * color_channels)))
+        if similarity > best: best = similarity
+        if similarity < worst: worst = similarity
+
+        if (match and similarity >= img[1]) or (not match and similarity >= img[2]):
+            found = True
+            if not compare_all:
+                break
+
+    return [found, f"{'{0:.2f}%'.format(best)} - {'{0:.2f}%'.format(worst)}"]
+
+
 #   ~~~Define Classes~~~
 class LivesplitClient(socket.socket):
     def __init__(self, host=None, port=16834, timeout=3):
@@ -170,49 +201,18 @@ class Engine:
 
             livesplit.send(self.cur_test.nomatch_send.encode())
             self.seek_time = time.time()
-            self.cur_test = self.cur_test.nomatch_test
             self.cycle = True
             self.image_log.append([self.split_num, self.lastshot])
             print(f"          -{match[1]} - '{self.cur_test.nomatch_send}'".replace("\r\n", "\\r\\n"))
+            self.cur_test = self.cur_test.nomatch_test
             self.split_num += 0.5
 
         # Per-second Console Output
         fps = fpstimer.update()
         elapsed = time.time() - self.start
         if elapsed > 1:
-            # print(f"{cur_test.name} ({match[1]}) - FPS: {int(fps)} ({'{0:.2f}'.format(elapsed)})")
+            #print(f"{self.cur_test.name} ({match[1]}) - FPS: {int(fps)} ({'{0:.2f}'.format(elapsed)})")
             self.start = time.time()
-
-
-#   ~~~Define Public Functions~~~
-def showImage(img, wait=0):
-    cv2.imshow("imgWin", img)
-    cv2.moveWindow("imgWin", 0, 0)  # Move it to (40,30)
-    cv2.waitKey(wait)
-    cv2.destroyAllWindows()
-
-
-def compare(image_list, screenshot, match=True, compare_all=False):
-    best, worst = 0, 100
-    found = False
-
-    for img in image_list:
-        composite = cv2.absdiff(img[0], screenshot)  # Composite images into difference map.
-        shape = np.shape(composite)  # [Pixel height, width, (color channels)]
-        color_channels = 1 if len(shape) == 2 else shape[2]
-        # depth needs to be resolved based on data type? (uint8 = 255, float = 1?)
-        depth = 255
-
-        similarity = 100 * (1 - ((np.sum(composite) / depth) / (shape[0] * shape[1] * color_channels)))
-        if similarity > best: best = similarity
-        if similarity < worst: worst = similarity
-
-        if (match and similarity >= img[1]) or (not match and similarity >= img[2]):
-            found = True
-            if not compare_all:
-                break
-
-    return [found, f"{'{0:.2f}%'.format(best)} - {'{0:.2f}%'.format(worst)}"]
 
 
 #   ~~~Instantiate Objects~~~
