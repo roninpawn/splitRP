@@ -125,11 +125,15 @@ class Engine:
         elif event.event_type == keyboard.KEY_UP:
             self.keys_down = {}
         if self.keys_down == self.reset_key:
-            self.cur_test = file.first_test
-            self.cycle = True
-            self.split_num = 0.0
-            self.write_images()
+            self.reset()
             print(f"RESET ({self.keys_down})")
+
+    def reset(self):
+        self.cur_test = file.first_test
+        self.cycle = True
+        self.split_num = 0.0
+        self.write_images()
+        self.image_log = []
 
     def write_images(self):
         for split, img in self.image_log:
