@@ -97,6 +97,89 @@ class ScreenShot():
             "width": area["width"], "height": area["height"]}
 
 
+class Engine:
+    def __init__(self):
+        self.start = time.time()
+        self.seek_time = time.time()
+        self.cycle = True
+        self.cur_test = file.first_test
+        self.split_num = 0.0
+        self.image_log = []
+
+        # Instantiate keyboard input.
+        self.reset_key = {'3': 81}
+        self.keys_down = {}
+        self.key_hook = keyboard.hook(self.test_hotkey)
+
+        # Wait for first screenshot to be captured:
+        self.rawshot = screen.shot()
+        while self.rawshot is None:
+            pass
+
+        print("Starting...")
+        self.run()
+
+    def test_hotkey(self, event):
+        if event.event_type == keyboard.KEY_DOWN:
+            self.keys_down[event.name] = event.scan_code
+        elif event.event_type == keyboard.KEY_UP:
+            self.keys_down = {}
+        if self.keys_down == self.reset_key:
+            self.cur_test = file.first_test
+            self.cycle = True
+            self.split_num = 0.0
+            self.write_images()
+            print(f"RESET ({self.keys_down})")
+
+    def write_images(self):
+        for split, img in self.image_log:
+            cv2.imwrite(f'runlog/{split}.png', img)
+
+    def run(self):
+        self.lastshot = self.rawshot
+        self.rawshot = screen.shot()
+        shot = processing(self.rawshot, self.cur_test.color_proc, self.cur_test.scale_img, self.cur_test.crop_area)
+        match = compare(self.cur_test.image_tests, shot, self.cycle, True)
+        if self.cycle:  # If Match Cycle(True)...
+            if match[0]:  # If match
+                livesplit.send(self.cur_test.match_send.encode())
+                seek_end = time.time() - self.seek_time
+                self.cycle = False
+                self.image_log.append([self.split_num, self.lastshot])
+                print(f"{int(self.split_num)}: [{'{0:.3f}'.format(seek_end)}] {match[1]} @ {int(fpstimer.fps)}fps -- "
+                      f"{str.upper(self.cur_test.name)}: '{self.cur_test.match_send}'".replace("\r\n", "\\r\\n"))
+                self.split_num += 0.5
+            # else:
+            #    file_num += 0.5
+            #    cv2.imwrite(f'runlog/{file_num}.png', rawshot)
+
+        elif not match[0]:  # If Unmatch Cycle(False) and no match found...
+            if self.cur_test.unmatch_test is not self.cur_test:
+                temp_test = self.cur_test.unmatch_test
+                temp_shot = processing(self.rawshot, temp_test.color_proc, temp_test.scale_img)
+                temp_match = compare(temp_test.image_tests, temp_shot, True, True)
+                if temp_match[0]:
+                    livesplit.send(temp_test.match_send.encode())
+                    self.cur_test = temp_test
+                    print(f"*{temp_test.name}* ({match[1]}) - Sent '{temp_test.match_send}'".replace("\r\n", "\\r\\n"))
+                    return
+
+            livesplit.send(self.cur_test.nomatch_send.encode())
+            self.seek_time = time.time()
+            self.cur_test = self.cur_test.nomatch_test
+            self.cycle = True
+            self.image_log.append([self.split_num, self.lastshot])
+            print(f"          -{match[1]} - '{self.cur_test.nomatch_send}'".replace("\r\n", "\\r\\n"))
+            self.split_num += 0.5
+
+        # Per-second Console Output
+        fps = fpstimer.update()
+        elapsed = time.time() - self.start
+        if elapsed > 1:
+            # print(f"{cur_test.name} ({match[1]}) - FPS: {int(fps)} ({'{0:.2f}'.format(elapsed)})")
+            self.start = time.time()
+
+
 #   ~~~Define Public Functions~~~
 def showImage(img, wait=0):
     cv2.imshow("imgWin", img)
@@ -128,84 +211,13 @@ def compare(image_list, screenshot, match=True, compare_all=False):
     return [found, f"{'{0:.2f}%'.format(best)} - {'{0:.2f}%'.format(worst)}"]
 
 
-def testHotkey(event):
-    global reset_key, keysdown, cur_test, cycle, file_num      # Temporary bodge. When objectified, 'self.' will do.
-    if event.event_type == keyboard.KEY_DOWN:
-        keysdown[event.name] = event.scan_code
-    elif event.event_type == keyboard.KEY_UP:
-        keysdown = {}
-    if keysdown == reset_key:
-        cur_test = file.first_test
-        cycle = True
-        file_num = 0.0
-        print(f"RESET ({keysdown})")
-
-
 #   ~~~Instantiate Objects~~~
 file = FileAccess('clustertruck.rp')
 livesplit = LivesplitClient()
 fpstimer = FPSTimer()
 screen = ScreenShot(file.master_crop, 1)
-
-#   ~~~Pre-run~~~
 livesplit.connect("localhost", 16834)
-start = time.time()
-seek_time = time.time()
-cycle = True
-cur_test = file.first_test
-file_num = 0.0
-# Monitor keyboard input for reset event.
-reset_key = {'3': 81}
-keysdown = {}
-keyhook = keyboard.hook(testHotkey)
-# Wait for first screenshot to be captured:
-rawshot = screen.shot()
-while rawshot is None:
-    pass
-
+mainloop = Engine()
 #   ~~~Seek Loop~~~
-print("Starting...")
 while True:
-    lastshot = rawshot
-    rawshot = screen.shot()
-    shot = processing(rawshot, cur_test.color_proc, cur_test.scale_img, cur_test.crop_area)
-    match = compare(cur_test.image_tests, shot, cycle, True)
-    if cycle:  # If Match Cycle(True)...
-        if match[0]:  # If match
-            livesplit.send(cur_test.match_send.encode())
-            seek_end = time.time() - seek_time
-            print(f"{int(file_num)}: [{'{0:.3f}'.format(seek_end)}] {match[1]} @ {int(fpstimer.fps)}fps -- "
-                  f"{str.upper(cur_test.name)}: '{cur_test.match_send}'".replace("\r\n", "\\r\\n"))
-            cycle = False
-            cv2.imwrite(f'runlog/{file_num}.png', lastshot)
-            file_num += 0.5
-        #else:
-        #    file_num += 0.5
-        #    cv2.imwrite(f'runlog/{file_num}.png', rawshot)
-
-    elif not match[0]:  # If Unmatch Cycle(False) and no match found...
-        if cur_test.unmatch_test is not cur_test:
-            temp_test = cur_test.unmatch_test
-            temp_shot = processing(rawshot, temp_test.color_proc, temp_test.scale_img)
-            temp_match = compare(temp_test.image_tests, temp_shot, True, True)
-            if temp_match[0]:
-                livesplit.send(temp_test.match_send.encode())
-                print(f"*{temp_test.name}* ({match[1]}) - "
-                      f"Sent '{temp_test.match_send}'".replace("\r\n", "\\r\\n"))
-                cur_test = temp_test
-                continue    # Goto while True:
-
-        livesplit.send(cur_test.nomatch_send.encode())
-        seek_time = time.time()
-        print(f"          -{match[1]} - '{cur_test.nomatch_send}'".replace("\r\n", "\\r\\n"))
-        cur_test = cur_test.nomatch_test
-        cycle = True
-        cv2.imwrite(f'runlog/{file_num}.png', lastshot)
-        file_num += 0.5
-
-    # Per-second Console Output
-    fps = fpstimer.update()
-    elapsed = time.time() - start
-    if elapsed > 1:
-        #print(f"{cur_test.name} ({match[1]}) - FPS: {int(fps)} ({'{0:.2f}'.format(elapsed)})")
-        start = time.time()
+    mainloop.run()
