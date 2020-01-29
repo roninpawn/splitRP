@@ -16,14 +16,14 @@ Unmatch = 85                # Percent, below which, to release the match
 [Menu]
 Directory = Clustertruck
 Images = menu1.png
-Match = 100
-Unmatch = 76
+Match = 96
+Unmatch = 95
 
 [Level Select]
 Directory = Clustertruck
-Images = select1.png|select2.png
-Match = 86
-Unmatch = 85
+Images = select1.png|select2.png|select3.png|select4.png|select5.png|select6.png|select7.png
+Match = 95
+Unmatch = 92
 
 [Level Complete]
 Directory = Clustertruck
@@ -49,7 +49,7 @@ ImagePacks = Menu
 UnMatch = Run Start
 NoMatch = Run Start
 Resize = .2
-Color = 6
+Color = thresh:100
 
 [Run Start]
 ImagePacks = Level Select
@@ -57,11 +57,11 @@ UnMatch = Pre Run
 NoMatch = Split Test
 NoMatchSend = setgametime 0.0\r\nstarttimer\r\n
 Resize = .2
-Color = 6
+Color = thresh:90
 
 [Split Test]
 ImagePacks = Level Complete
 MatchSend = pausegametime\r\nsplit\r\n
 NoMatchSend = unpausegametime\r\n
 Resize = .2
-Color = 6
+Color = gray

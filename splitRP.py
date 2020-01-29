@@ -196,7 +196,8 @@ class Engine:
                 if temp_match[0]:
                     livesplit.send(temp_test.match_send.encode())
                     self.cur_test = temp_test
-                    print(f"*{temp_test.name}* ({match[1]}) - Sent '{temp_test.match_send}'".replace("\r\n", "\\r\\n"))
+                    print(f"*{temp_test.name}* ({temp_match[1]}) - "
+                          f"Sent '{temp_test.match_send}'".replace("\r\n", "\\r\\n"))
                     return
 
             livesplit.send(self.cur_test.nomatch_send.encode())

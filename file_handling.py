@@ -10,14 +10,16 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 
-def xywh2dict(x, y, w, h): return {'left':x,'top':y,'width':w,'height':h}
+def xywh2dict(x, y, w, h): return {'left': x, 'top': y, 'width': w, 'height': h}
 
 
 def processing(img, color=None, resize=None, crop=None):
     if crop is not None:
         img = img[crop["top"]:crop["top"] + crop["height"], crop["left"]:crop["left"] + crop["width"]]
     if color is not None:
-        img = cv2.cvtColor(img, color)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        if type(color) is int:
+            (thresh, img) = cv2.threshold(img, color, 255, cv2.THRESH_BINARY)
     if resize is not None:
         img = cv2.resize(img, None, fx=resize, fy=resize, interpolation=cv2.INTER_AREA)
     return img
@@ -132,8 +134,17 @@ class FileAccess:
         else:
             crop = None
         resize = float(self.cfg[name]["Resize"].strip()) if "Resize" in self.cfg[name].keys() else None
-        color = int(self.cfg[name]["Color"].strip()) if "Color" in self.cfg[name].keys() else None
-
+        if "Color" in self.cfg[name].keys():
+            color = [s.strip().lower() for s in self.cfg[name]["Color"].split(":")]
+            if color[0] == "thresh" and len(color) > 1:
+                try:
+                    color = int(color[1])
+                except:
+                    color = None
+            elif color[0] != "gray" and color[0] != "grey":
+                color = None
+        else:
+            color = None
         test = TestObject(name, self.master_crop, packs, match_send, unmatch, nomatch, nomatch_send,
                           crop, resize, color)
         return test
