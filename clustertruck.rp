@@ -1,9 +1,10 @@
 [Settings]
+NativeResolution = 1920x1080
 ScreenshotArea = 353:136,560:825
 ImagePacks = Menu, Level Select, Level Complete
 Tests = Pre Run, Run Start, Split Test
 FirstTest = Run Start
-
+RunLogging = 2
 
 # --Image Packs--
 
@@ -21,9 +22,9 @@ Unmatch = 95
 
 [Level Select]
 Directory = Clustertruck
-Images = select1.png|select2.png|select3.png|select4.png|select5.png|select6.png|select7.png
-Match = 95
-Unmatch = 92
+Images = sel1.png|sel2.png|sel4a.png|sel4b.png|sel6.png|sel7a.png|sel7b.png|sel8a.png|sel8c.png|sel9.png
+Match = 94
+Unmatch = 92.5    # Was 92
 
 [Level Complete]
 Directory = Clustertruck
@@ -56,8 +57,9 @@ ImagePacks = Level Select
 UnMatch = Pre Run
 NoMatch = Split Test
 NoMatchSend = setgametime 0.0\r\nstarttimer\r\n
-Resize = .2
-Color = thresh:90
+Crop = 353:404, 420:124
+Resize = 1
+Color = thresh:115
 
 [Split Test]
 ImagePacks = Level Complete

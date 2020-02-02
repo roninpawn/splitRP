@@ -6,11 +6,13 @@ import numpy as np
 
 
 # Public Functions
-def resource_path(relative_path):
-    return os.path.join(os.path.abspath("."), relative_path)
+def resource_path(relative_path): return os.path.join(os.path.abspath("."), relative_path)
 
 
 def xywh2dict(x, y, w, h): return {'left': x, 'top': y, 'width': w, 'height': h}
+
+
+def dict2xywh(d): return [d["left"], d["top"], d["width"], d["height"]]
 
 
 def processing(img, color=None, resize=None, crop=None):
@@ -27,7 +29,7 @@ def processing(img, color=None, resize=None, crop=None):
 
 # Classes
 class ImagePack:
-    def __init__(self, name, directory, files, match_percent=100.0, unmatch_percent=0.0):
+    def __init__(self, name, directory, files, match_percent=100.0, unmatch_percent=0.0, scale=1.0):
         self.name = name
         self.files = self._parse_paths(files, directory)
         self.images = []
@@ -42,6 +44,12 @@ class ImagePack:
             for x in range(0, len(file_arr), 1):
                 file_arr[x] = "images" + "/" + dir + "/" + file_arr[x]
         return(file_arr)
+
+    def resize(self, scale_x=1.0, scale_y=None):
+        if scale_y is None:
+            scale_y = scale_x
+        for n in range(0, len(self.images), 1):
+            self.images[n] = cv2.resize(self.images[n], None, scale_x, scale_y, cv2.INTER_AREA)
 
 
 class TestObject:
@@ -93,23 +101,27 @@ class FileAccess:
         self.cfg = configparser.ConfigParser(inline_comment_prefixes="#")
         self.cfg.read_file(open(resource_path(filename)))
 
+        self.resolution = [int(n) for n in self.cfg["Settings"]["NativeResolution"].replace(" ", "").split("x")]
         self.master_crop = xywh2dict(
             *[int(n) for n in self.cfg["Settings"]["ScreenshotArea"].replace(" ", "").replace(":", ",").split(",")])
 
         self.packs = {}
-        packs = [s.strip() for s in self.cfg["Settings"]["ImagePacks"].strip().split(",")]
-        for pack in packs:
+        pack_list = [s.strip() for s in self.cfg["Settings"]["ImagePacks"].strip().split(",")]
+        for pack in pack_list:
             self.packs[pack] = self.build_pack(pack)
 
         self.tests = {}
-        tests = [s.strip() for s in self.cfg["Settings"]["Tests"].strip().split(",")]
-        for test in tests:
+        self._test_list = [s.strip() for s in self.cfg["Settings"]["Tests"].strip().split(",")]
+
+        self.runlog = int(self.cfg["Settings"]["RunLogging"].strip())
+
+    def init_tests(self):
+        for test in self._test_list:
             self.tests[test] = self.build_test(test)
         for name, test in self.tests.items():
             unmatch = self.tests[test.unmatch_test] if type(test.unmatch_test) is str else None
             nomatch = self.tests[test.nomatch_test] if type(test.nomatch_test) is str else None
             test.update_tests(unmatch, nomatch)
-
         self.first_test = self.tests[self.cfg["Settings"]["FirstTest"].strip()]
 
     def build_pack(self, name):
@@ -148,3 +160,25 @@ class FileAccess:
         test = TestObject(name, self.master_crop, packs, match_send, unmatch, nomatch, nomatch_send,
                           crop, resize, color)
         return test
+
+    def convert(self, resolution):
+        def scale(screen_dict, h, w):
+            coords = dict2xywh(screen_dict)
+            return xywh2dict(int(coords[0] * w), int(coords[1] * h), int(coords[2] * w), int(coords[3] * h))
+
+        if resolution["height"] != self.resolution[1] or resolution["width"] != self.resolution[0]:
+            print("Resizing values to different resolution.")
+            dif_h = resolution["height"] / self.resolution[1]
+            dif_w = resolution["width"] / self.resolution[0]
+            diff = dif_w if dif_w > dif_h else dif_h
+
+            if '{0:.3f}'.format(dif_h) != '{0:.3f}'.format(dif_w):
+                print("[Warning: Screen resolution does not match aspect ratio of tests.\r\n"
+                      "          No guarantees on this working.]")
+            self.master_crop = scale(self.master_crop, dif_h, dif_w)
+            for pack in self.packs.values():
+                pack.resize(dif_w, dif_h)
+            for test in self.tests.values():
+                test.crop_area = scale(test.crop_area, dif_h, dif_w)
+                test.scale_img /= diff
+                test.process_images(self.master_crop)

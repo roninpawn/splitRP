@@ -112,19 +112,20 @@ class FPSTimer:
 class ScreenShot():
     def __init__(self, area=None, monitor=1, *kwargs):
         with mss.mss() as self.sct:
-            self._mon = self.sct.monitors[monitor]
-            if area is None: area = self._mon
-            self.setCrop(area)
+            self.monitor_list = self.sct.monitors
+            self.monitor = self.monitor_list[monitor]
+            if area is None: area = self.monitor
+            self.set_crop(area)
 
     def shot(self):
         self.last_shot = np.array(self.sct.grab(self.cap_area))
         return self.last_shot
 
-    def setCrop(self, area, monitor=None):
+    def set_crop(self, area, monitor=None):
         if monitor is not None:
-            self._mon = self.sct.monitors[monitor]
+            self.monitor = self.sct.monitors[monitor]
         self.cap_area = {
-            "left": self._mon["left"] + area["left"], "top": self._mon["top"] + area["top"],
+            "left": self.monitor["left"] + area["left"], "top": self.monitor["top"] + area["top"],
             "width": area["width"], "height": area["height"]}
 
 
@@ -136,6 +137,8 @@ class Engine:
         self.cur_test = file.first_test
         self.split_num = 0.0
         self.image_log = []
+        self.log_limit = 120
+        self.send = ""
 
         # Instantiate keyboard input.
         self.reset_key = {'3': 81}
@@ -170,59 +173,79 @@ class Engine:
         for split, img in self.image_log:
             cv2.imwrite(f'runlog/{split}.png', img)
 
+    def log_images(self, last, cur):
+        if self.split_num < self.log_limit:
+            if file.runlog == 2:
+                self.image_log.append([self.split_num, last])
+                self.split_num += 0.25
+                self.image_log.append([self.split_num, cur])
+                self.split_num += 0.25
+            elif file.runlog == 1:
+                self.image_log.append([self.split_num, cur])
+                self.split_num += 0.5
+            else:
+                self.split_num += 1
+
     def run(self):
-        self.lastshot = self.rawshot
+        lastshot = self.rawshot
         self.rawshot = screen.shot()
+        # screen.shot is blocking, so send signal to livesplit ON the next frame collection for consistency.
+        if self.send != "":
+            livesplit.send(self.send.encode())
+            self.send = ""
+
         shot = processing(self.rawshot, self.cur_test.color_proc, self.cur_test.scale_img, self.cur_test.crop_area)
         match = compare(self.cur_test.image_tests, shot, self.cycle, True)
         if self.cycle:  # If Match Cycle(True)...
             if match[0]:  # If match
-                livesplit.send(self.cur_test.match_send.encode())
+                self.send = self.cur_test.match_send
                 seek_end = time.time() - self.seek_time
                 self.cycle = False
-                self.image_log.append([self.split_num, self.lastshot])
                 print(f"{int(self.split_num)}: [{'{0:.3f}'.format(seek_end)}] {match[1]} @ {int(fpstimer.fps)}fps -- "
                       f"{str.upper(self.cur_test.name)}: '{self.cur_test.match_send}'".replace("\r\n", "\\r\\n"))
-                self.split_num += 0.5
-            # else:
-            #    file_num += 0.5
-            #    cv2.imwrite(f'runlog/{file_num}.png', rawshot)
+                self.log_images(lastshot, shot)
 
         elif not match[0]:  # If Unmatch Cycle(False) and no match found...
             if self.cur_test.unmatch_test is not self.cur_test:
                 temp_test = self.cur_test.unmatch_test
-                temp_shot = processing(self.rawshot, temp_test.color_proc, temp_test.scale_img)
+                temp_shot = processing(self.rawshot, temp_test.color_proc, temp_test.scale_img, temp_test.crop_area)
                 temp_match = compare(temp_test.image_tests, temp_shot, True, True)
                 if temp_match[0]:
-                    livesplit.send(temp_test.match_send.encode())
+                    self.send = temp_test.match_send
                     self.cur_test = temp_test
                     print(f"*{temp_test.name}* ({temp_match[1]}) - "
                           f"Sent '{temp_test.match_send}'".replace("\r\n", "\\r\\n"))
                     return
 
-            livesplit.send(self.cur_test.nomatch_send.encode())
+            self.send = self.cur_test.nomatch_send
             self.seek_time = time.time()
             self.cycle = True
-            self.image_log.append([self.split_num, self.lastshot])
             print(f"          -{match[1]} - '{self.cur_test.nomatch_send}'".replace("\r\n", "\\r\\n"))
+
             self.cur_test = self.cur_test.nomatch_test
-            self.split_num += 0.5
+            self.log_images(lastshot, shot)
 
         # Per-second Console Output
         fps = fpstimer.update()
         elapsed = time.time() - self.start
         if elapsed > 1:
-            #print(f"{self.cur_test.name} ({match[1]}) - FPS: {int(fps)} ({'{0:.2f}'.format(elapsed)})")
+            print(f"{self.cur_test.name} ({match[1]}) - FPS: {int(fps)} ({'{0:.2f}'.format(elapsed)})")
             self.start = time.time()
 
 
 #   ~~~Instantiate Objects~~~
+screen = ScreenShot(monitor=1)
+
 file = FileAccess('clustertruck.rp')
+file.convert(screen.monitor)
+file.init_tests()
+screen.set_crop(file.master_crop)
+
 livesplit = LivesplitClient()
 fpstimer = FPSTimer()
-screen = ScreenShot(file.master_crop, 1)
-livesplit.connect("localhost", 16834)
 mainloop = Engine()
+livesplit.connect("localhost", 16834)
+
 #   ~~~Seek Loop~~~
 while True:
     mainloop.run()
