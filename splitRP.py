@@ -15,27 +15,14 @@ def showImage(img, wait=0):
     cv2.destroyAllWindows()
 
 
-def compare(image_list, screenshot, match=True, compare_all=False):
-    best, worst = 0, 100
-    found = False
+def compare(img1, img2):
+    composite = cv2.absdiff(img1, img2)         # Composite images into difference map.
+    shape = np.shape(composite)                 # [Pixel height, width, (color channels)]
+    color_channels = 1 if len(shape) == 2 else shape[2]
+    depth = 255         # depth needs to be resolved based on data type? (uint8 = 255, float = 1?)
+    similarity = 100 * (1 - ((np.sum(composite) / depth) / (shape[0] * shape[1] * color_channels)))
 
-    for img in image_list:
-        composite = cv2.absdiff(img[0], screenshot)  # Composite images into difference map.
-        shape = np.shape(composite)  # [Pixel height, width, (color channels)]
-        color_channels = 1 if len(shape) == 2 else shape[2]
-        # depth needs to be resolved based on data type? (uint8 = 255, float = 1?)
-        depth = 255
-
-        similarity = 100 * (1 - ((np.sum(composite) / depth) / (shape[0] * shape[1] * color_channels)))
-        if similarity > best: best = similarity
-        if similarity < worst: worst = similarity
-
-        if (match and similarity >= img[1]) or (not match and similarity >= img[2]):
-            found = True
-            if not compare_all:
-                break
-
-    return [found, f"{'{0:.2f}%'.format(best)} - {'{0:.2f}%'.format(worst)}"]
+    return similarity
 
 
 #   ~~~Define Classes~~~
@@ -124,9 +111,9 @@ class ScreenShot():
     def set_crop(self, area, monitor=None):
         if monitor is not None:
             self.monitor = self.sct.monitors[monitor]
-        self.cap_area = {
-            "left": self.monitor["left"] + area["left"], "top": self.monitor["top"] + area["top"],
-            "width": area["width"], "height": area["height"]}
+        self.cap_area = xywh2dict(
+            self.monitor["left"] + area["left"], self.monitor["top"] + area["top"],area["width"], area["height"]
+        )
 
 
 class Engine:
@@ -134,11 +121,12 @@ class Engine:
         self.start = time.time()
         self.seek_time = time.time()
         self.cycle = True
-        self.cur_test = file.first_test
+        self.cur_match = [True, 0.0, 100.0]
+        self.cur_pack = file.first_pack
         self.split_num = 0.0
         self.image_log = []
         self.log_limit = 120
-        self.send = ""
+        self.send_queue = ""
 
         # Instantiate keyboard input.
         self.reset_key = {'3': 81}
@@ -163,7 +151,7 @@ class Engine:
             print(f"RESET ({self.keys_down})")
 
     def reset(self):
-        self.cur_test = file.first_test
+        self.cur_pack = file.first_pack
         self.cycle = True
         self.split_num = 0.0
         self.write_images()
@@ -186,50 +174,81 @@ class Engine:
             else:
                 self.split_num += 1
 
+    def multi_test(self, tests, match=True, compare_all=False):
+        best, worst = 0.0, 100.0
+        result = False
+        out_shot = None
+
+        for test in tests:
+            shot = processing(self.rawshot, test.color_proc, test.resize, test.crop_area)
+            if out_shot is None:
+                out_shot = shot
+            percent = test.match_percent if match else test.unmatch_percent
+
+            for img in test.images:
+                if np.shape(img) != np.shape(shot):
+                    print(np.shape(img), np.shape(shot))
+                    showImage(img)
+                    showImage(shot)
+                similarity = compare(img, shot)
+                if similarity > best: best = similarity
+                if similarity < worst: worst = similarity
+
+                if similarity >= percent:
+                    if not compare_all:
+                        return [True, best, worst, shot]
+                    else:
+                        out_shot = shot
+                        result = True
+
+        return [result, best, worst, shot]
+
     def run(self):
         lastshot = self.rawshot
         self.rawshot = screen.shot()
-        # screen.shot is blocking, so send signal to livesplit ON the next frame collection for consistency.
-        if self.send != "":
-            livesplit.send(self.send.encode())
-            self.send = ""
+        # screen.shot is blocking, so send signal to livesplit ON the next frame collection event for consistency.
+        if self.send_queue != "":
+            livesplit.send(self.send_queue.encode())
+            self.send_queue = ""
 
-        shot = processing(self.rawshot, self.cur_test.color_proc, self.cur_test.scale_img, self.cur_test.crop_area)
-        match = compare(self.cur_test.image_tests, shot, self.cycle, True)
-        if self.cycle:  # If Match Cycle(True)...
-            if match[0]:  # If match
-                self.send = self.cur_test.match_send
+        self.cur_match = self.multi_test(self.cur_pack.match_tests, self.cycle, True)
+        if self.cycle:  # If Matching Cycle...
+            if self.cur_match[0]:    # If match found...
+                self.send_queue = self.cur_pack.match_send
                 seek_end = time.time() - self.seek_time
                 self.cycle = False
-                print(f"{int(self.split_num)}: [{'{0:.3f}'.format(seek_end)}] {match[1]} @ {int(fpstimer.fps)}fps -- "
-                      f"{str.upper(self.cur_test.name)}: '{self.cur_test.match_send}'".replace("\r\n", "\\r\\n"))
-                self.log_images(lastshot, shot)
+                print(f"{int(self.split_num)}: [{'{0:.3f}'.format(seek_end)}] {'{0:.2f}'.format(self.cur_match[1])} @ "
+                      f"{int(fpstimer.fps)}fps -- {str.upper(self.cur_pack.name)}: '{self.cur_pack.match_send}'".
+                      replace("\r\n", "\\r\\n"))
+                self.log_images(lastshot, self.cur_match[3])
 
-        elif not match[0]:  # If Unmatch Cycle(False) and no match found...
-            if self.cur_test.unmatch_test is not self.cur_test:
-                temp_test = self.cur_test.unmatch_test
-                temp_shot = processing(self.rawshot, temp_test.color_proc, temp_test.scale_img, temp_test.crop_area)
-                temp_match = compare(temp_test.image_tests, temp_shot, True, True)
-                if temp_match[0]:
-                    self.send = temp_test.match_send
-                    self.cur_test = temp_test
-                    print(f"*{temp_test.name}* ({temp_match[1]}) - "
-                          f"Sent '{temp_test.match_send}'".replace("\r\n", "\\r\\n"))
-                    return
+        else:   # If Unmatch Cycle...
+            if not self.cur_match[0]:   # If Nomatch found.
+                if self.cur_pack.unmatch_packs is not None:
+                    for pack in self.cur_pack.unmatch_packs:
+                        match = self.multi_test(pack.match_tests)
+                        if match[0]:
+                            self.send_queue = pack.match_send
+                            self.cur_pack = pack
+                            print(f"*{pack.name}* ({'{0:.2f}'.format(self.cur_match[1])}) - Sent '{pack.match_send}'".
+                                  replace("\r\n", "\\r\\n"))
+                            fpstimer.update()
+                            return
 
-            self.send = self.cur_test.nomatch_send
-            self.seek_time = time.time()
-            self.cycle = True
-            print(f"          -{match[1]} - '{self.cur_test.nomatch_send}'".replace("\r\n", "\\r\\n"))
-
-            self.cur_test = self.cur_test.nomatch_test
-            self.log_images(lastshot, shot)
+                self.send_queue = self.cur_pack.nomatch_send
+                self.seek_time = time.time()
+                self.cycle = True
+                print(f"          -{'{0:.2f}'.format(self.cur_match[1])} - '{self.cur_pack.nomatch_send}'".
+                      replace("\r\n", "\\r\\n"))
+                self.cur_pack = self.cur_pack.nomatch_pack
+                self.log_images(lastshot, self.cur_match[3])
 
         # Per-second Console Output
         fps = fpstimer.update()
         elapsed = time.time() - self.start
         if elapsed > 1:
-            print(f"{self.cur_test.name} ({match[1]}) - FPS: {int(fps)} ({'{0:.2f}'.format(elapsed)})")
+            print(f"{self.cur_pack.name} ({'{0:.2f}'.format(self.cur_match[1])}) - FPS: {int(fps)} "
+                  f"({'{0:.2f}'.format(elapsed)})")
             self.start = time.time()
 
 
@@ -238,7 +257,7 @@ screen = ScreenShot(monitor=1)
 
 file = FileAccess('clustertruck.rp')
 file.convert(screen.monitor)
-file.init_tests()
+file.init_packs()
 screen.set_crop(file.master_crop)
 
 livesplit = LivesplitClient()

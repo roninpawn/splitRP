@@ -1,69 +1,100 @@
 [Settings]
 NativeResolution = 1920x1080
 ScreenshotArea = 353:136,560:825
-ImagePacks = Menu, Level Select, Level Complete
-Tests = Pre Run, Run Start, Split Test
-FirstTest = Run Start
-RunLogging = 2
+ImageDirectory = Clustertruck
+RunLogging = 1
 
-# --Image Packs--
-
-[Sample Image Pack]
-Directory = subfolder       # resolves to 'splitRP/images/subfolder'
-Images = image.png|image2.png|image3.png
-Match = 90                  # Percent of minimum similarity to match on
-Unmatch = 85                # Percent, below which, to release the match
-
-[Menu]
-Directory = Clustertruck
-Images = menu1.png
-Match = 96
-Unmatch = 95
-
-[Level Select]
-Directory = Clustertruck
-Images = sel1.png|sel2.png|sel4a.png|sel4b.png|sel6.png|sel7a.png|sel7b.png|sel8a.png|sel8c.png|sel9.png
-Match = 94
-Unmatch = 92.5    # Was 92
-
-[Level Complete]
-Directory = Clustertruck
-Images = lc1.png | lc2_91.5.png | lc3_91.5.png | lc4_93.png | lc5_93.png | lc6_94.png | lc7_94.3.png
-Match = 93.5
-Unmatch = 90
+Tests = Menu, LS Dark, LS Light, Level Complete, Level Complete Easy, Pause
+TestPacks = Run Select, Pre Run, Running, LC Pause, LC Re-Enter
+FirstPack =  Run Select
 
 
 # -- Tests --
 
 [Sample Test]
-ImagePacks = Sample Image Pack, Another Pack, Etc
-MatchSend = pausegametime\r\nsplit\r\n
-UnMatch = Test to try on Unmatch
-NoMatch = Test to fall through to if Unmatch fails
-NoMatchSend = unpausegametime\r\n
-Crop = x : y, width : height
-Resize = .2                 # 20% of original
-Color = 6                   # 6 = convert to grayscale
+Images = img1.png|img2.png|img3.png     # Images in 'ImageDirectory' to process and test.
+Match = 92.5                            # Percent of minimum similarity to match on
+Unmatch = 85                            # Percent, below which, to release the match
+Crop = x : y, width : height            # Screen coordinates as left:top corner, width:height.
+Resize = .2                             # 20% of original
+Color = thresh:127                      # Support 'gray/grey' for grayscale, and 'thresh:#' for monochrome.
 
-[Pre Run]
-ImagePacks = Menu
-UnMatch = Run Start
-NoMatch = Run Start
+[Menu]
+Images = menu1.png|menu2.png
+Match = 100
+Unmatch = 100
 Resize = .2
 Color = thresh:100
 
-[Run Start]
-ImagePacks = Level Select
-UnMatch = Pre Run
-NoMatch = Split Test
-NoMatchSend = setgametime 0.0\r\nstarttimer\r\n
-Crop = 353:404, 420:124
-Resize = 1
-Color = thresh:115
+[LS Dark]
+Images = sel4a.png|sel4b.png|sel7a.png|sel7b.png|sel9.png
+Match = 94
+Unmatch = 90
+Crop = 353:422, 560:155
+Color = thresh:95
 
-[Split Test]
-ImagePacks = Level Complete
-MatchSend = pausegametime\r\nsplit\r\n
-NoMatchSend = unpausegametime\r\n
+[LS Light]
+Images = sel1.png|sel2.png|sel6.png|sel8a.png|sel8c.png
+Match = 94
+Unmatch = 91
+Crop = 353:422, 560:155
+Color = thresh:114
+
+[Level Complete]
+Images = lc1.png|lc2_91.5.png|lc3_91.5.png|lc4_93.png|lc5_93.png|lc6_94.png|lc7_94.3.png|lc_pause.png|lc_pause2.png
+Match = 96
+Unmatch = 90
 Resize = .2
-Color = gray
+Color = thresh:215
+
+[Level Complete Easy]
+Images = lc1.png|lc2_91.5.png|lc3_91.5.png|lc4_93.png|lc5_93.png|lc6_94.png|lc7_94.3.png|lc_pause.png|lc_pause2.png
+Match = 90
+Unmatch = 90
+Resize = .2
+Color = thresh:215
+
+[Pause]
+Images = pause_lc.png
+Match = 96
+Unmatch = 90
+Color = thresh:60
+
+
+# -- Test Packs --
+
+[Sample Test Pack]
+Match = Test 1, Test 2                      # Match seeks individual test(s).
+MatchSend = pausegametime\r\nsplit\r\n      # Livesplit signal to send on match.
+Unmatch = Test Pack 1, Test Pack 2          # Unmatch seeks Test Pack(s) on frame that current match is lost.
+NoMatch  = Test Pack 3                      # NoMatch points to a Test Pack to go to if Unmatch fails.
+NoMatchSend = unpausegametime\r\n           # Livesplit signal to send if Unmatch fails.
+
+[Run Select]
+Match = LS Dark, LS Light
+Unmatch = Pre Run
+Nomatch = Running
+NoMatchSend = setgametime 0.0\r\nstarttimer\r\n
+
+[Pre Run]
+Match = Menu
+Unmatch = Run Select
+NoMatch = Run Select
+
+[Running]
+Match = Level Complete
+MatchSend = pausegametime\r\nsplit\r\n
+Unmatch = LC Pause
+NoMatchSend = unpausegametime\r\n
+
+[LC Pause]
+Match = Pause
+Unmatch = LC Re-Enter
+NoMatch = Running
+NoMatchSend = unpausegametime\r\n
+
+[LC Re-Enter]
+Match = Level Complete Easy
+Unmatch = LC Pause
+NoMatch = Running
+NoMatchSend = unpausegametime\r\n
