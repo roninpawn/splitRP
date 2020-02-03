@@ -4,7 +4,7 @@ ScreenshotArea = 353:136,560:825
 ImageDirectory = Clustertruck
 RunLogging = 1
 
-Tests = Menu, LS Dark, LS Light, Level Complete, Level Complete Easy, Pause
+Tests = Menu Light, Menu Dark, LS Dark, LS Light, Level Complete, Level Complete Easy, Pause
 TestPacks = Run Select, Pre Run, Running, LC Pause, LC Re-Enter
 FirstPack =  Run Select
 
@@ -19,19 +19,28 @@ Crop = x : y, width : height            # Screen coordinates as left:top corner,
 Resize = .2                             # 20% of original
 Color = thresh:127                      # Support 'gray/grey' for grayscale, and 'thresh:#' for monochrome.
 
-[Menu]
-Images = menu1.png|menu2.png
-Match = 100
+[Menu Light]
+Images = menu1.png
+Match = 93
 Unmatch = 100
+Crop = 635:294,278:450
 Resize = .2
-Color = thresh:100
+Color = thresh:90
+
+[Menu Dark]
+Images = menu2.png
+Match = 93
+Unmatch = 100
+Crop = 635:294,278:450
+Resize = .2
+Color = thresh:180
 
 [LS Dark]
 Images = sel4a.png|sel4b.png|sel7a.png|sel7b.png|sel9.png
-Match = 94
-Unmatch = 90
+Match = 96
+Unmatch = 94
 Crop = 353:422, 560:155
-Color = thresh:95
+Co3lor = thresh:80
 
 [LS Light]
 Images = sel1.png|sel2.png|sel6.png|sel8a.png|sel8c.png
@@ -77,7 +86,7 @@ Nomatch = Running
 NoMatchSend = setgametime 0.0\r\nstarttimer\r\n
 
 [Pre Run]
-Match = Menu
+Match = Menu Dark, Menu Light
 Unmatch = Run Select
 NoMatch = Run Select
 
