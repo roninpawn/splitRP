@@ -41,8 +41,8 @@ Crop = 353:422, 560:155
 Color = thresh:114
 
 [Level Complete]
-Images = lc1.png|lc2_91.5.png|lc3_91.5.png|lc4_93.png|lc5_93.png|lc6_94.png|lc7_94.3.png|lc_pause.png|lc_pause2.png
-Match = 96
+Images = lc1.png|lc2_91.5.png|lc3_91.5.png|lc4_93.png|lc5_93.png|lc6_94.png|lc7_94.3.png|lc8.png|lc_pause.png|lc_pause2.png
+Match = 94.3
 Unmatch = 90
 Resize = .2
 Color = thresh:215
