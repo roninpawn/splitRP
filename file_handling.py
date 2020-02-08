@@ -6,6 +6,13 @@ import cv2
 
 
 # Public Functions
+def showImage(img, wait=0):
+    cv2.imshow("imgWin", img)
+    cv2.moveWindow("imgWin", 0, 0)  # Move it to (40,30)
+    cv2.waitKey(wait)
+    cv2.destroyAllWindows()
+
+
 def resource_path(relative_path): return os.path.join(os.path.abspath("."), relative_path)
 
 
@@ -39,8 +46,13 @@ class Test:
         self.color_proc = color_proc
         self.images = []
 
-    def conform_crop(self, area):       # Adjust self.crop_area relative to 'area' given.
+    def conform_crop(self, area, resize):       # Adjust self.crop_area relative to 'area' given.
+        def scale(screen_dict, h, w):
+            coords = dict2xywh(screen_dict)
+            return xywh2dict(int(coords[0] * w), int(coords[1] * h), int(coords[2] * w), int(coords[3] * h))
+
         if self.crop_area is not None:
+            self.crop_area = scale(self.crop_area, resize[1], resize[0])
             if area["left"] + area["width"] > self.crop_area["left"] >= area["left"]:
                 self.crop_area["left"] -= area["left"]
             else:
@@ -53,15 +65,15 @@ class Test:
             self.crop_area = xywh2dict(0, 0, area["width"], area["height"])
 
     def load_images(self, area, scale):
-        self.conform_crop(area)
+        self.conform_crop(area, scale)
         if self.resize is not None:
             self.resize = np.divide(self.resize, scale)
         self.images = []
         for file in self.image_paths:
             img = cv2.imread(resource_path(file), 1)
-            img = img[area["top"]: area["top"] + area["height"], area["left"]: area["left"] + area["width"]]
             img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
             img = cv2.resize(img, None, None, scale[0], scale[1], cv2.INTER_AREA)
+            img = img[area["top"]: area["top"] + area["height"], area["left"]: area["left"] + area["width"]]
             self.images.append(processing(img, self.color_proc, self.resize, self.crop_area))
 
 

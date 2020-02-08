@@ -2,10 +2,11 @@
 NativeResolution = 1920x1080
 ScreenshotArea = 353:136,560:825
 ImageDirectory = Clustertruck
-RunLogging = 1
+RunLogging = 2
 
-Tests = Menu Light, Menu Dark, LS Dark, LS Light, Level Complete, Level Complete Easy, Pause
-TestPacks = Run Select, Pre Run, Running, LC Pause, LC Re-Enter
+Tests = Menu Light, Menu Dark, LS Dark, LS Light, LS Dark Drop, LS Light Drop, Level Complete, Level Complete Easy,
+        Pause, Main Light, Main Dark
+TestPacks = Run Select, Pre Run, Running, LC Pause, LC Re-Enter, LC Pause Exit, LS Re-Enter, Menu Re-Enter
 FirstPack =  Run Select
 
 
@@ -17,11 +18,11 @@ Match = 92.5                            # Percent of minimum similarity to match
 Unmatch = 85                            # Percent, below which, to release the match
 Crop = x : y, width : height            # Screen coordinates as left:top corner, width:height.
 Resize = .2                             # 20% of original
-Color = thresh:127                      # Support 'gray/grey' for grayscale, and 'thresh:#' for monochrome.
+Color = thresh:127                      # Supports 'gray/grey' for grayscale, and 'thresh:#' for monochrome.
 
 [Menu Light]
 Images = menu1.png
-Match = 93
+Match = 98
 Unmatch = 100
 Crop = 635:294,278:450
 Resize = .2
@@ -29,23 +30,53 @@ Color = thresh:90
 
 [Menu Dark]
 Images = menu2.png
-Match = 93
+Match = 98
 Unmatch = 100
 Crop = 635:294,278:450
 Resize = .2
 Color = thresh:180
 
+[Main Light]
+Images = main1.png
+Match = 98
+Unmatch = 100
+Crop = 712:313,201:431
+Resize = .2
+Color = thresh:90
+
+[Main Dark]
+Images = main2.png
+Match = 98
+Unmatch = 100
+Crop = 712:313,201:431
+Resize = .2
+Color = thresh:180
+
 [LS Dark]
 Images = sel4a.png|sel4b.png|sel7a.png|sel7b.png|sel9.png
-Match = 96
+Match = 93
 Unmatch = 94
 Crop = 353:422, 560:155
 Co3lor = thresh:80
 
 [LS Light]
 Images = sel1.png|sel2.png|sel6.png|sel8a.png|sel8c.png
-Match = 94
-Unmatch = 91
+Match = 92
+Unmatch = 90
+Crop = 353:422, 560:155
+Color = thresh:114
+
+[LS Dark Drop]
+Images = sel4a.png|sel4b.png|sel7a.png|sel7b.png|sel9.png
+Match = 93
+Unmatch = 100
+Crop = 353:422, 560:155
+Co3lor = thresh:80
+
+[LS Light Drop]
+Images = sel1.png|sel2.png|sel6.png|sel8a.png|sel8c.png
+Match = 92
+Unmatch = 100
 Crop = 353:422, 560:155
 Color = thresh:114
 
@@ -80,13 +111,13 @@ NoMatch  = Test Pack 3                      # NoMatch points to a Test Pack to g
 NoMatchSend = unpausegametime\r\n           # Livesplit signal to send if Unmatch fails.
 
 [Run Select]
-Match = LS Dark, LS Light
+Match = LS Dark, LS Light, Pause
 Unmatch = Pre Run
 Nomatch = Running
 NoMatchSend = setgametime 0.0\r\nstarttimer\r\n
 
 [Pre Run]
-Match = Menu Dark, Menu Light
+Match = Main Dark, Main Light, Menu Dark, Menu Light, LS Dark, LS Light
 Unmatch = Run Select
 NoMatch = Run Select
 
@@ -98,12 +129,26 @@ NoMatchSend = unpausegametime\r\n
 
 [LC Pause]
 Match = Pause
-Unmatch = LC Re-Enter
+Unmatch = LC Re-Enter, LC Pause Exit
 NoMatch = Running
 NoMatchSend = unpausegametime\r\n
 
 [LC Re-Enter]
 Match = Level Complete Easy
 Unmatch = LC Pause
+NoMatch = Running
+NoMatchSend = unpausegametime\r\n
+
+[LC Pause Exit]
+Match = Main Light, Main Dark, Menu Dark, Menu Light, LS Dark Drop, LS Light Drop
+NoMatch = LS Re-Enter
+
+[Menu Re-Enter]
+Match = Menu Dark, Menu Light
+NoMatch = LS Re-Enter
+
+[LS Re-Enter]
+Match = LS Dark, LS Light
+Unmatch = Menu Re-Enter
 NoMatch = Running
 NoMatchSend = unpausegametime\r\n

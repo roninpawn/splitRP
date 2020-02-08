@@ -8,13 +8,6 @@ from file_handling import *
 
 
 #   ~~~Define Public Functions~~~
-def showImage(img, wait=0):
-    cv2.imshow("imgWin", img)
-    cv2.moveWindow("imgWin", 0, 0)  # Move it to (40,30)
-    cv2.waitKey(wait)
-    cv2.destroyAllWindows()
-
-
 def compare(img1, img2):
     composite = cv2.absdiff(img1, img2)         # Composite images into difference map.
     shape = np.shape(composite)                 # [Pixel height, width, (color channels)]
@@ -187,7 +180,8 @@ class Engine:
 
             for img in test.images:
                 if np.shape(img) != np.shape(shot):
-                    print(np.shape(img), np.shape(shot))
+                    print("THIS AIN'T GON' WERK!")
+                    print(test.name, np.shape(img), np.shape(shot))
                     showImage(img)
                     showImage(shot)
                 similarity = compare(img, shot)
@@ -247,8 +241,8 @@ class Engine:
         fps = fpstimer.update()
         elapsed = time.time() - self.start
         if elapsed > 1:
-            print(f"{self.cur_pack.name} ({'{0:.2f}'.format(self.cur_match[1])}) - FPS: {int(fps)} "
-                  f"({'{0:.2f}'.format(elapsed)})")
+            #print(f"{self.cur_pack.name} ({'{0:.2f}'.format(self.cur_match[1])}) - FPS: {int(fps)} "
+            #      f"({'{0:.2f}'.format(elapsed)})")
             self.start = time.time()
 
 
