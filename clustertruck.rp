@@ -22,15 +22,15 @@ Color = thresh:127                      # Supports 'gray/grey' for grayscale, an
 
 [Menu Light]
 Images = menu1.png
-Match = 98
+Match = 97
 Unmatch = 100
 Crop = 635:294,278:450
 Resize = .2
-Color = thresh:90
+Color = thresh:80
 
 [Menu Dark]
 Images = menu2.png
-Match = 98
+Match = 97
 Unmatch = 100
 Crop = 635:294,278:450
 Resize = .2
@@ -38,15 +38,15 @@ Color = thresh:180
 
 [Main Light]
 Images = main1.png
-Match = 98
+Match = 97
 Unmatch = 100
 Crop = 712:313,201:431
 Resize = .2
-Color = thresh:90
+Color = thresh:100
 
 [Main Dark]
 Images = main2.png
-Match = 98
+Match = 97
 Unmatch = 100
 Crop = 712:313,201:431
 Resize = .2
