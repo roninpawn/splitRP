@@ -54,10 +54,10 @@ Color = thresh:180
 
 [LS Dark]
 Images = sel4a.png|sel4b.png|sel7a.png|sel7b.png|sel9.png
-Match = 93
-Unmatch = 94
+Match = 97
+Unmatch = 95.7
 Crop = 353:422, 560:155
-Co3lor = thresh:80
+Color = thresh:115
 
 [LS Light]
 Images = sel1.png|sel2.png|sel6.png|sel8a.png|sel8c.png
@@ -68,10 +68,10 @@ Color = thresh:114
 
 [LS Dark Drop]
 Images = sel4a.png|sel4b.png|sel7a.png|sel7b.png|sel9.png
-Match = 93
+Match = 98
 Unmatch = 100
 Crop = 353:422, 560:155
-Co3lor = thresh:80
+Color = thresh:180
 
 [LS Light Drop]
 Images = sel1.png|sel2.png|sel6.png|sel8a.png|sel8c.png
@@ -98,6 +98,7 @@ Color = thresh:215
 Images = pause_lc.png
 Match = 96
 Unmatch = 90
+Crop = 353:367, 560:404
 Color = thresh:60
 
 
