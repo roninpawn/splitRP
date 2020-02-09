@@ -1,11 +1,11 @@
 [Settings]
 NativeResolution = 1920x1080
-ScreenshotArea = 353:136,560:825
+ScreenshotArea = 353:0,560:825
 ImageDirectory = Clustertruck
 RunLogging = 2
 
-Tests = Menu Light, Menu Dark, LS Dark, LS Light, LS Dark Drop, LS Light Drop, Level Complete, Level Complete Easy,
-        Pause, Main Light, Main Dark
+Tests = Menu Light, Menu Dark, LS Dark, LS Light, LS Dark Drop, LS Light Drop, Level Complete, Pause,
+        Main Light, Main Dark
 TestPacks = Run Select, Pre Run, Running, LC Pause, LC Re-Enter, LC Pause Exit, LS Re-Enter, Menu Re-Enter
 FirstPack =  Run Select
 
@@ -22,15 +22,15 @@ Color = thresh:127                      # Supports 'gray/grey' for grayscale, an
 
 [Menu Light]
 Images = menu1.png
-Match = 97
+Match = 98
 Unmatch = 100
 Crop = 635:294,278:450
 Resize = .2
-Color = thresh:80
+Color = thresh:95
 
 [Menu Dark]
 Images = menu2.png
-Match = 97
+Match = 98
 Unmatch = 100
 Crop = 635:294,278:450
 Resize = .2
@@ -38,15 +38,15 @@ Color = thresh:180
 
 [Main Light]
 Images = main1.png
-Match = 97
+Match = 98
 Unmatch = 100
 Crop = 712:313,201:431
 Resize = .2
-Color = thresh:100
+Color = thresh:95
 
 [Main Dark]
 Images = main2.png
-Match = 97
+Match = 98
 Unmatch = 100
 Crop = 712:313,201:431
 Resize = .2
@@ -54,10 +54,10 @@ Color = thresh:180
 
 [LS Dark]
 Images = sel4a.png|sel4b.png|sel7a.png|sel7b.png|sel9.png
-Match = 97
-Unmatch = 95.7
+Match = 93
+Unmatch = 94
 Crop = 353:422, 560:155
-Color = thresh:115
+Co3lor = thresh:80
 
 [LS Light]
 Images = sel1.png|sel2.png|sel6.png|sel8a.png|sel8c.png
@@ -68,10 +68,10 @@ Color = thresh:114
 
 [LS Dark Drop]
 Images = sel4a.png|sel4b.png|sel7a.png|sel7b.png|sel9.png
-Match = 98
+Match = 93
 Unmatch = 100
 Crop = 353:422, 560:155
-Color = thresh:180
+Color = thresh:80
 
 [LS Light Drop]
 Images = sel1.png|sel2.png|sel6.png|sel8a.png|sel8c.png
@@ -81,24 +81,21 @@ Crop = 353:422, 560:155
 Color = thresh:114
 
 [Level Complete]
-Images = lc1.png|lc2_91.5.png|lc3_91.5.png|lc4_93.png|lc5_93.png|lc6_94.png|lc7_94.3.png|lc8.png|lc_pause.png|lc_pause2.png
-Match = 94
-Unmatch = 90
-Resize = .2
-Color = thresh:215
+Images = lc1.png
+Match = 96.5
+Unmatch = 95
+Crop = 353:0, 515:135
+Color = thresh:228
+Resize = .1
 
-[Level Complete Easy]
-Images = lc1.png|lc2_91.5.png|lc3_91.5.png|lc4_93.png|lc5_93.png|lc6_94.png|lc7_94.3.png|lc_pause.png|lc_pause2.png
-Match = 90
-Unmatch = 90
-Resize = .2
-Color = thresh:215
+# For accurate testing of compressed videos, lower Level Complete's match/unmatch to account for compression.
+# Match = 90
+# Unmatch = 89
 
 [Pause]
 Images = pause_lc.png
-Match = 96
-Unmatch = 90
-Crop = 353:367, 560:404
+Match = 97
+Unmatch = 96
 Color = thresh:60
 
 
@@ -135,7 +132,7 @@ NoMatch = Running
 NoMatchSend = unpausegametime\r\n
 
 [LC Re-Enter]
-Match = Level Complete Easy
+Match = Level Complete
 Unmatch = LC Pause
 NoMatch = Running
 NoMatchSend = unpausegametime\r\n
