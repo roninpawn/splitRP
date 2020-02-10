@@ -131,7 +131,7 @@ class Engine:
         while self.rawshot is None:
             pass
 
-        print("Starting...")
+        print("Started and ready...")
         self.run()
 
     def test_hotkey(self, event):

@@ -26,7 +26,9 @@ def processing(img, color=None, resize=None, crop=None):
     if crop is not None:
         img = img[crop["top"]:crop["top"] + crop["height"], crop["left"]:crop["left"] + crop["width"]]
     if color is not None:
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Grayscale by luminance. Y of XYZ = Luminance. Extract Y channel.
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2XYZ)
+        img = img[:, :, 1]
         if type(color) is int:
             (thresh, img) = cv2.threshold(img, color, 255, cv2.THRESH_BINARY)
     if resize is not None:

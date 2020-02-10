@@ -1,6 +1,6 @@
 [Settings]
 NativeResolution = 1920x1080
-ScreenshotArea = 353:0,560:825
+ScreenshotArea = 416:0,670:517
 ImageDirectory = Clustertruck
 RunLogging = 2
 
@@ -24,78 +24,86 @@ Color = thresh:127                      # Supports 'gray/grey' for grayscale, an
 Images = menu1.png
 Match = 98
 Unmatch = 100
-Crop = 635:294,278:450
-Resize = .2
-Color = thresh:95
+Crop = 721:314,479:79
+Resize = .5
+Color = thresh:100
 
 [Menu Dark]
 Images = menu2.png
 Match = 98
 Unmatch = 100
-Crop = 635:294,278:450
-Resize = .2
-Color = thresh:180
+Crop = 721:314,479:79
+Resize = .5
+Color = thresh:200
 
 [Main Light]
 Images = main1.png
 Match = 98
 Unmatch = 100
-Crop = 712:313,201:431
-Resize = .2
-Color = thresh:95
+Crop = 837:307,246:87
+Resize = .5
+Color = thresh:100
 
 [Main Dark]
 Images = main2.png
 Match = 98
 Unmatch = 100
-Crop = 712:313,201:431
-Resize = .2
-Color = thresh:180
-
-[LS Dark]
-Images = sel4a.png|sel4b.png|sel7a.png|sel7b.png|sel9.png
-Match = 93
-Unmatch = 94
-Crop = 353:422, 560:155
-Co3lor = thresh:80
+Crop = 837:307,246:87
+Resize = .5
+Color = thresh:200
 
 [LS Light]
-Images = sel1.png|sel2.png|sel6.png|sel8a.png|sel8c.png
-Match = 92
-Unmatch = 90
-Crop = 353:422, 560:155
-Color = thresh:114
+Images = sel1.png|sel1b.png
+Match = 82
+Unmatch = 70
+Crop = 416:470,670:47
+Color = thresh:138
 
-[LS Dark Drop]
-Images = sel4a.png|sel4b.png|sel7a.png|sel7b.png|sel9.png
-Match = 93
-Unmatch = 100
-Crop = 353:422, 560:155
-Color = thresh:80
+[LS Dark]
+Images = sel4a.png|sel7a.png|sel8b.png|sel9.png
+Match = 82
+Unmatch = 70
+Crop = 416:470,670:47
+Color = thresh:55
 
 [LS Light Drop]
-Images = sel1.png|sel2.png|sel6.png|sel8a.png|sel8c.png
-Match = 92
+Images = sel1.png|sel1b.png
+Match = 82
 Unmatch = 100
-Crop = 353:422, 560:155
-Color = thresh:114
+Crop = 416:470,670:47
+Color = thresh:138
+
+[LS Dark Drop]
+Images = sel4a.png|sel7a.png|sel8b.png|sel9.png
+Match = 82
+Unmatch = 100
+Crop = 416:470,670:47
+Color = thresh:55
 
 [Level Complete]
-Images = lc1.png
+Images = lc6_94.png|lc3_91.5.png|lc5_93.png
 Match = 96.5
-Unmatch = 95
-Crop = 353:0, 515:135
+Unmatch = 90
+Crop = 416:0, 464:120
 Color = thresh:228
-Resize = .1
+Resize = .5
 
 # For accurate testing of compressed videos, lower Level Complete's match/unmatch to account for compression.
 # Match = 90
 # Unmatch = 89
+# Resize = .1
+
+
+# Match = 96.5
+# Unmatch = 95
+# Resize = .5
+
 
 [Pause]
 Images = pause_lc.png
 Match = 97
 Unmatch = 96
+Crop = 801:365,317:77
 Color = thresh:60
 
 
