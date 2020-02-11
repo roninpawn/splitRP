@@ -83,16 +83,6 @@ Unmatch = 93
 Crop = 416:0, 670:117
 Resize = .1
 
-# For accurate testing of compressed videos, lower Level Complete's match/unmatch to account for compression.
-# Match = 90
-# Unmatch = 89
-# Resize = .1
-
-
-# Match = 96.5
-# Unmatch = 95
-# Resize = .5
-
 
 [Pause]
 Images = pause_lc.png

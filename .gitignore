@@ -1,1 +1,4 @@
 runlog/
+dist/
+build/
+splitRP.spec
