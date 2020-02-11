@@ -76,7 +76,9 @@ class Test:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
             img = cv2.resize(img, None, None, scale[0], scale[1], cv2.INTER_AREA)
             img = img[area["top"]: area["top"] + area["height"], area["left"]: area["left"] + area["width"]]
-            self.images.append(processing(img, self.color_proc, self.resize, self.crop_area))
+            img = processing(img, self.color_proc, self.resize, self.crop_area)
+            #showImage(img)
+            self.images.append(img)
 
 
 class TestPack:

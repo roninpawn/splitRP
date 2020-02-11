@@ -22,34 +22,30 @@ Color = thresh:127                      # Supports 'gray/grey' for grayscale, an
 
 [Menu Light]
 Images = menu1.png
-Match = 98
+Match = 95
 Unmatch = 100
 Crop = 721:314,479:79
-Resize = .5
 Color = thresh:100
 
 [Menu Dark]
 Images = menu2.png
-Match = 98
+Match = 95
 Unmatch = 100
 Crop = 721:314,479:79
-Resize = .5
 Color = thresh:200
 
 [Main Light]
 Images = main1.png
-Match = 98
+Match = 95
 Unmatch = 100
 Crop = 837:307,246:87
-Resize = .5
 Color = thresh:100
 
 [Main Dark]
 Images = main2.png
-Match = 98
+Match = 95
 Unmatch = 100
 Crop = 837:307,246:87
-Resize = .5
 Color = thresh:200
 
 [LS Light]
@@ -81,12 +77,11 @@ Crop = 416:470,670:47
 Color = thresh:55
 
 [Level Complete]
-Images = lc6_94.png|lc3_91.5.png|lc5_93.png
-Match = 96.5
-Unmatch = 90
-Crop = 416:0, 464:120
-Color = thresh:228
-Resize = .5
+Images = lc1.png|lc2.png|lc3.png|lc4.png|lc5.png|lc6.png|lc7.png
+Match = 96
+Unmatch = 93
+Crop = 416:0, 670:117
+Resize = .1
 
 # For accurate testing of compressed videos, lower Level Complete's match/unmatch to account for compression.
 # Match = 90
