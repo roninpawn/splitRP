@@ -82,12 +82,15 @@ class Test:
 
 
 class TestPack:
-    def __init__(self, name, match_tests, match_send='', unmatch_packs=None, nomatch_pack=None, nomatch_send=''):
+    def __init__(self, name, match_tests, match_actions=None, match_send='', unmatch_packs=None, nomatch_pack=None,
+                 nomatch_actions=None, nomatch_send=''):
         self.name = name
         self.match_tests = match_tests
+        self.match_actions = match_actions
         self.match_send = match_send
         self.unmatch_packs = unmatch_packs
         self.nomatch_pack = nomatch_pack
+        self.nomatch_actions = nomatch_actions
         self.nomatch_send = nomatch_send
 
 
@@ -101,6 +104,10 @@ class FileAccess:
             *[int(n) for n in self.cfg["Settings"]["ScreenshotArea"].replace(" ", "").replace(":", ",").split(",")])
         self.directory = f"images\\{self.cfg['Settings']['ImageDirectory'].strip()}\\"
         self.runlog = int(self.cfg["Settings"]["RunLogging"].strip())
+
+        self.commands = {}
+        for cmd in self.cfg["Commands"]:
+            self.commands[cmd] = self.cfg["Commands"][cmd].strip().replace("\\r\\n", "\r\n")
 
         self.tests = {}
         for test in [s.strip() for s in self.cfg["Settings"]["Tests"].strip().split(",")]:
@@ -150,12 +157,19 @@ class FileAccess:
         unmatch = [s.strip() for s in self.cfg[name]["Unmatch"].split(",")] if "UnMatch" in self.cfg[name].keys()\
             else None
         nomatch = self.cfg[name]["NoMatch"].strip() if "NoMatch" in self.cfg[name].keys() else None
-        match_send = self.cfg[name]["MatchSend"].strip().replace("\\r\\n", "\r\n") \
-            if "MatchSend" in self.cfg[name].keys() else ''
-        nomatch_send = self.cfg[name]["NoMatchSend"].strip().replace("\\r\\n", "\r\n") \
-            if "NoMatchSend" in self.cfg[name].keys() else ''
 
-        return TestPack(name, match, match_send, unmatch, nomatch, nomatch_send)
+        def get_acts_send(pack, key):
+            action_list = [s.strip().lower() for s in self.cfg[pack][key].split(",")] \
+                if key in self.cfg[pack].keys() else ''
+            send = ''
+            for action in action_list:
+                send += self.commands[action] if action in self.commands.keys() else ''
+            return action_list, send
+
+        match_actions, match_send = get_acts_send(name, "MatchAction")
+        nomatch_actions, nomatch_send = get_acts_send(name, "NoMatchAction")
+
+        return TestPack(name, match, match_actions, match_send, unmatch, nomatch, nomatch_actions, nomatch_send)
 
     def convert(self, resolution):
         def scale(screen_dict, h, w):
@@ -175,3 +189,20 @@ class FileAccess:
             dif_h, dif_w = 1.0, 1.0
         for test in self.tests.values():
             test.load_images(self.master_crop, [dif_w, dif_h])
+
+
+class SettingsAccess:
+    def __init__(self, filename):
+        self.cfg = configparser.ConfigParser(inline_comment_prefixes="#")
+        self.cfg.read_file(open(resource_path(filename)))
+
+        def get_pairs(name):
+            out = {}
+            for pair in self.cfg["Settings"][name].replace(" ", "").split(","):
+                pair = pair.split(":")
+                out[pair[0]] = int(pair[1])
+            return out
+
+        self.reset_key = get_pairs("ResetKey")
+        self.video_key = get_pairs("VideoKey")
+        self.verbose = True if self.cfg["Settings"]["PerSecondLog"].strip() == "True" else False
