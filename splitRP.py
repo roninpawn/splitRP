@@ -18,6 +18,23 @@ def compare(img1, img2):
     return similarity
 
 
+def time_to_hms(t):
+    return f"{time.strftime('%H:%M:%S', time.localtime(t))}.{repr(t).split('.')[1][:3]}"
+
+
+def secs_to_hms(dur):
+    if dur <= 0:
+        return "0.000"
+    else:
+        h = dur // 3600
+        dur -= h * 3600
+        m, s = divmod(int(dur), 60)
+        ms = '{:.03f}'.format(dur)[-3:]
+        out = f"{h}:" if h > 0 else ""
+        out += f"{'{:02d}'.format(m)}:{'{:02d}'.format(s)}.{ms}" if m > 0 else f"{s}.{ms}"
+        return out
+
+
 #   ~~~Define Classes~~~
 class LivesplitClient(socket.socket):
     def __init__(self, host=None, port=16834, timeout=3):
@@ -119,6 +136,7 @@ class Timer:
             s = sum(self._durations)
             c = self._dur_count
         else:
+            of_last = int(of_last)
             c = of_last
             if of_last > self._dur_pointer:
                 s = sum(self._durations[0:self._dur_pointer]) + sum(self._durations[-(of_last - self._dur_pointer):])
@@ -164,17 +182,105 @@ class ScreenShot:
         )
 
 
+class Logger:
+    def __init__(self):
+        self.img_limit = 150
+        self.reset()
+        
+    def reset(self):       
+        self.event_num = 0.0
+        self.run_log = []
+        
+    def generate(self, frame_rate):
+        self.output_log(frame_rate)
+        self.print_times(frame_rate)
+        self.write_images()
+    
+    def log_event(self, name, cycle, actions, frame, frame_rate, last_img, cur_img, results):
+        now = time.time()
+        img = [last_img, cur_img, results[3]] if self.event_num <= self.img_limit else []
+        best_match = results[1]
+        self.run_log.append(
+            [self.event_num, name, cycle, best_match, actions, frame, frame_rate, now, img])
+        self.event_num += 0.5
+        
+    def output_log(self, frame_rate):
+        if len(self.run_log) != 0:
+            last, cnt, dur = 0, 0, 0.0
+            out = "\r\n--- RUN LOG ---\r\n"
+            for num, name, cycle, best, actions, frame, fps, t, img_list in self.run_log:
+                cnt = frame - last
+                out += f"{num}: "
+                out += f"MATCHED [{name}] " if not cycle else f"       -[{name}] "
+                out += f"at {'{0:.2f}'.format(best)}% on {frame} @ {'{0:.1f}'.format(1/fps)}fps |  " \
+                       f"{cnt} frames ({'{0:.3f}'.format(cnt / frame_rate)}s) since last  |  " \
+                       f"Did '{''.join([str(a) + ', ' for a in actions])[:-2]}' @ {time_to_hms(t)}\r\n"
+                last = frame
+            print(out + f"--- LOG END ---\r\n")
+
+    def write_images(self):
+        if file.runlog:
+            for event in self.run_log:
+                if event[-1] is not None:
+                    num = event[0]
+                    img_list = event[-1]
+                    cv2.imwrite(f'runlog/{num}a.png', img_list[0])
+                    cv2.imwrite(f'runlog/{num}b.png', img_list[1])
+                    if file.runlog == 2:
+                        cv2.imwrite(f'runlog/{num}c.png', img_list[2])
+            
+    def time_by_log(self):
+        rta, igt, waste, first, last, w_last = 0, 0, 0, 0, 0, 0
+        log = copy.copy(self.run_log)
+        start = len(log)
+
+        # Discard any events that happen outside the start and final split of each run in the log.
+        for x in range(len(self.run_log)-1, -1, -1):
+            for action in self.run_log[x][4]:
+                if action == "split":
+                    if start is not None:
+                        del log[x+1:start]
+                        start = None
+                elif action == "start":
+                    start = x
+        del log[:start]
+
+        # Tally the frame-counts of RTA, IGT, and WASTE timing, for all runs in the log.
+        for entry in log:
+            for action in entry[4]:
+                frame = entry[5]
+                if action == "split":
+                    rta = frame - first
+                    igt += frame - last
+                    last = frame
+                elif action == "pause":
+                    w_last = frame
+                elif action == "unpause":
+                    waste += frame - w_last
+                    last = frame
+                elif action == "start":
+                    first, last = frame, frame
+                    igt, waste, w_last = 0, 0, 0
+        return rta, igt, waste
+    
+    def print_times(self, rate):
+        rta, igt, waste = self.time_by_log()
+        if rta != 0:
+            tally_out = f"RTA: {secs_to_hms(rta / rate)}({rta}) " \
+                        f"IGT: {secs_to_hms(igt / rate)}({igt}) " \
+                        f"WASTE: {secs_to_hms(waste / rate)}({waste})\r\n"
+            print(tally_out)
+
+
 class Engine:
     def __init__(self):
-        self.start = time.time()
-        self.img_limit = 120
         self.frame_limit = 60
         self.send_queue = ""
-        self.run_log = []
         self.drop_frame = False
         self.log_enabled = settings.verbose
         self.live_run = True
 
+        self.log = Logger()
         self.run_timer = Timer()
         self.process_timer = Timer()
         self.shot_timer = Timer()
@@ -196,20 +302,17 @@ class Engine:
         print("Started and ready...")
 
     def reset(self):
-        self.output_log()
-        self.write_images()
+        self.log.generate(self.frame_limit)
+        self.log.reset()
 
         self.cur_pack = file.first_pack
         self.cycle = True
-        self.split_num = -0.5
         self.frame_count = 0
 
         self.run_timer.clear()
         self.process_timer.clear()
         self.shot_timer.clear()
         self.fps_timer.restart()
-
-        self.run_log = []
 
     def send(self):
         if self.send_queue != "":
@@ -228,50 +331,10 @@ class Engine:
             if self.keys_down == settings.video_key:
                 self.live_run = False
 
-    def log_action(self, actions, frame, img=None):
-        if img is not None:
-            img = [self.lastshot, self.rawshot, img]
-            self.split_num += .5
-        self.run_log.append([self.split_num, actions, frame, time.time(), img])
-
-    def output_log(self):
-        if len(self.run_log) != 0:
-            last = None
-            cnt, dur = 0, 0.0
-            whole, fract = 0, 0
-            out = "\r\n--- RUN LOG ---\r\n"
-            for num, actions, frame, t, imgs in self.run_log:
-                if last is not None:
-                    cnt = frame - last[2]
-                    dur = t - last[3]
-                    actions = str(actions).replace("\r\n", "\\r\\n")
-                out += f"{num}: [{'{0:.3f}'.format((whole + fract) / self.frame_limit)}] ({whole}|{fract})" \
-                       f" on {frame} took {'{0:.3f}'.format(dur)} over" \
-                       f" {cnt} ({'{0:.3f}'.format(cnt / self.frame_limit)}) did {actions}\r\n"
-                if num >= 1.0:
-                    if num % 1 == 0:
-                        whole += cnt
-                    else:
-                        fract += cnt
-                last = [num, actions, frame, t]
-            print(out + f"FINAL: [{'{0:.3f}'.format((whole + fract) / self.frame_limit)}] ({whole + fract}) - "
-                        f"In: {'{0:.3f}'.format(whole / self.frame_limit)} ({whole}), "
-                        f"Out: {'{0:.3f}'.format(fract / self.frame_limit)} ({fract}) (times by frame count)"
-                        f"\r\n--- END ---\r\n")
-
-    def write_images(self):
-        if file.runlog:
-            for split, act, frame, t, img_list in self.run_log:
-                if img_list is not None:
-                    cv2.imwrite(f'runlog/{split}a.png', img_list[0])
-                    cv2.imwrite(f'runlog/{split}b.png', img_list[1])
-                    if file.runlog == 2:
-                        cv2.imwrite(f'runlog/{split}c.png', img_list[2])
-
     def multi_test(self, tests, match=True, compare_all=False):
         best, worst = 0.0, 100.0
         result = False
-        out_shot = None
+        out_shot, shot = None, None
 
         for test in tests:
             shot = processing(self.rawshot, test.color_proc, test.resize, test.crop_area)
@@ -304,12 +367,12 @@ class Engine:
                 self.send_queue = self.cur_pack.match_send
                 self.run_timer.stop()
                 self.cycle = False
-                fps = int(1 / self.fps_timer.avg())
-                print(f"{int(self.split_num)}: [{'{0:.3f}'.format(self.run_timer.last())}] "
+                print(f"{int(self.log.event_num)}: [{'{0:.3f}'.format(self.run_timer.last())}] "
                       f"on {self.frame_count} with {'{0:.2f}'.format(cur_match[1])}% @ "
-                      f"{int(1 / self.fps_timer.avg(fps))}fps -- {str.upper(self.cur_pack.name)} "
+                      f"{int(1 / self.fps_timer.avg(self.frame_limit))}fps -- {str.upper(self.cur_pack.name)} "
                       f"'{self.cur_pack.match_send}'".replace("\r\n", "\\r\\n"))
-                self.log_action(self.cur_pack.match_send, self.frame_count, cur_match[3])
+                self.log.log_event(self.cur_pack.name, self.cycle, self.cur_pack.match_actions, self.frame_count,
+                                   self.fps_timer.avg(self.frame_limit), self.lastshot, self.rawshot, cur_match)
 
         elif not cur_match[0]:  # If UnMatch Cycle and no match found
             if self.cur_pack.unmatch_packs is not None:
@@ -320,7 +383,9 @@ class Engine:
                         self.cur_pack = pack
                         print(f"*{pack.name}* ({'{0:.2f}'.format(cur_match[1])}) - Sent '{pack.match_send}'".
                               replace("\r\n", "\\r\\n"))
-                        self.log_action(pack.match_send, self.frame_count)
+                        self.log.log_event(self.cur_pack.name, self.cycle, self.cur_pack.match_actions,
+                                           self.frame_count, self.fps_timer.avg(self.frame_limit), self.lastshot,
+                                           self.rawshot, cur_match)
                         return
 
             self.send_queue = self.cur_pack.nomatch_send
@@ -328,40 +393,37 @@ class Engine:
             self.cycle = True
             print(f"          - on {self.frame_count} with {'{0:.2f}'.format(cur_match[1])}% - "
                   f"'{self.cur_pack.nomatch_send}'".replace("\r\n", "\\r\\n"))
-            self.log_action(self.cur_pack.nomatch_send, self.frame_count, cur_match[3])
+            nm_actions = self.cur_pack.nomatch_actions
             self.cur_pack = self.cur_pack.nomatch_pack
+            self.log.log_event(self.cur_pack.name, self.cycle, nm_actions, self.frame_count,
+                               self.fps_timer.avg(self.frame_limit), self.lastshot, self.rawshot, cur_match)
 
     def mp4_analyze(self, cur_match):
-        def acts_to_time(action_list, timer):
-            for action in action_list:
-                if action == "split" or action == "unpause":
-                    timer.split()
-                elif action == "pause":
-                    timer.stop()
-                elif action == "start":
-                    timer.start()
-
         if self.cycle:  # If Matching Cycle...
             if cur_match[0]:  # If match found...
-                self.log_action(self.cur_pack.match_actions, self.frame_count, cur_match[3])
-                print(f"{self.split_num}: Matched {self.cur_pack.name}")
                 self.cycle = False
+                self.log.log_event(self.cur_pack.name, self.cycle, self.cur_pack.match_actions, self.frame_count,
+                                   self.fps_timer.avg(self.frame_limit), self.lastshot, self.rawshot, cur_match)
+                print(f"{self.log.event_num}: Matched {self.cur_pack.name} on {self.frame_count}")
 
         elif not cur_match[0]:  # If UnMatch Cycle and no match found
             if self.cur_pack.unmatch_packs is not None:
                 for pack in self.cur_pack.unmatch_packs:
                     match = self.multi_test(pack.match_tests)
                     if match[0]:
-                        self.log_action(pack.match_actions, self.frame_count)
                         self.cur_pack = pack
+                        self.log.log_event(self.cur_pack.name, self.cycle, self.cur_pack.match_actions,
+                                           self.frame_count, self.fps_timer.avg(self.frame_limit), self.lastshot,
+                                           self.rawshot, cur_match)
                         self.fps_timer.split()
-                        print(f"{self.split_num}: Unmatched to {self.cur_pack.name}")
+                        print(f"{self.log.event_num}: Unmatched to {self.cur_pack.name} on {self.frame_count}")
                         return
-
-            self.log_action(self.cur_pack.nomatch_actions, self.frame_count, cur_match[3])
-            print(f"{self.split_num}: NoMatched to {self.cur_pack.nomatch_pack.name}")
             self.cycle = True
+            nm_actions = self.cur_pack.nomatch_actions
             self.cur_pack = self.cur_pack.nomatch_pack
+            self.log.log_event(self.cur_pack.name, self.cycle, nm_actions, self.frame_count,
+                               self.fps_timer.avg(self.frame_limit), self.lastshot, self.rawshot, cur_match)
+            print(f"{self.log.event_num}: NoMatched to {self.cur_pack.nomatch_pack.name} on {self.frame_count}")
 
     def console_logging(self, cur_match, output=False):
         self.fps_timer.split()
@@ -467,59 +529,11 @@ class Engine:
 
             self.lastshot = frame
             has_frames, frame = video.read()
+            self.fps_timer.split()
 
         vid_timer.stop()
-        self.output_log()
-        self.write_images()
-
-        def tally_runs():
-            rta, igt, waste, first, last, w_last = 0, 0, 0, 0, 0, 0
-            out_log = []
-
-            log = copy.copy(self.run_log)
-            start = len(log)
-
-            # Discard any events that happen outside the start and final split of each run in the log.
-            for x in range(len(self.run_log)-1, -1, -1):
-                for action in self.run_log[x][1]:
-                    if action == "split":
-                        if start is not None:
-                            del log[x+1:start]
-                            start = None
-                    elif action == "start":
-                        start = x
-            del log[:start]
-
-            # Tally the frame-counts of RTA, IGT, and WASTE timing, for all runs in the log.
-            for entry in log:
-                for action in entry[1]:
-                    frame = entry[2]
-                    if action == "split":
-                        rta = frame - first
-                        igt += frame - last
-                        last = frame
-                    elif action == "pause":
-                        w_last = frame
-                    elif action == "unpause":
-                        waste += frame - w_last
-                        last = frame
-                    elif action == "start":
-                        if rta != 0:
-                            out_log.append([rta, igt, waste])
-                        first, last = frame, frame
-                        igt, waste, w_last = 0, 0, 0
-
-            out_log.append([rta, igt, waste])
-            return out_log
-
-        tally = tally_runs()
-        tally_out = "--- SUMMARY ---\r\n"
-        for rta, igt, waste in tally:
-            tally_out += f"RTA: {'{0:.3f}'.format(rta / rate)}({rta}) " \
-                         f"IGT: {'{0:.3f}'.format(igt / rate)}({igt}) " \
-                         f"WASTE: {'{0:.3f}'.format(waste / rate)}({waste})"
-
-        print(tally_out + f"\r\nVideo Analysis took: {vid_timer.last()} of duration: {total_frames / rate}")
+        self.log.generate(rate)
+        print(f"\r\nVideo Analysis took: {vid_timer.last()} of duration: {total_frames / rate}")
 
 
 #   ~~~Instantiate Objects~~~
