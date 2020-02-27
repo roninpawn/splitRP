@@ -272,6 +272,25 @@ class Logger:
             print(tally_out)
 
 
+class KeyInput:
+    def __init__(self):
+        self.keys_down = {}
+        self.key_hook = keyboard.hook(self.test_hotkey)
+
+    def test_hotkey(self, event):
+        if event.event_type == keyboard.KEY_DOWN:
+            self.keys_down[event.name] = event.scan_code
+        elif event.event_type == keyboard.KEY_UP:
+            self.keys_down = {}
+
+        if mainloop.live_run:
+            if self.keys_down == settings.reset_key:
+                mainloop.reset()
+                print(f"RESET ({self.keys_down})")
+            if self.keys_down == settings.video_key:
+                mainloop.live_run = False
+
+
 class Engine:
     def __init__(self):
         self.frame_limit = 60
@@ -285,13 +304,9 @@ class Engine:
         self.process_timer = Timer()
         self.shot_timer = Timer()
         self.fps_timer = Timer()
+        self.key_input = KeyInput()
 
         self.reset()
-
-        # Instantiate keyboard input.
-        self.reset_key = settings.reset_key
-        self.keys_down = {}
-        self.key_hook = keyboard.hook(self.test_hotkey)
 
         # Wait for first screenshot to be captured:
         self.rawshot = screen.shot()
@@ -318,18 +333,6 @@ class Engine:
         if self.send_queue != "":
             livesplit.send(self.send_queue.encode())
             self.send_queue = ""
-
-    def test_hotkey(self, event):
-        if event.event_type == keyboard.KEY_DOWN:
-            self.keys_down[event.name] = event.scan_code
-        elif event.event_type == keyboard.KEY_UP:
-            self.keys_down = {}
-        if self.live_run:
-            if self.keys_down == self.reset_key:
-                self.reset()
-                print(f"RESET ({self.keys_down})")
-            if self.keys_down == settings.video_key:
-                self.live_run = False
 
     def multi_test(self, tests, match=True, compare_all=False):
         best, worst = 0.0, 100.0
