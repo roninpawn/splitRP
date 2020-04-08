@@ -1,10 +1,10 @@
-import time
 import socket
 from select import select as select
 import mss
 import mss.tools
 import keyboard
 from file_handling import *
+from ui2 import *
 
 
 #   ~~~Define Public Functions~~~
@@ -183,8 +183,8 @@ class ScreenShot:
 
 
 class Logger:
-    def __init__(self):
-        self.img_limit = 150
+    def __init__(self, img_limit=150):
+        self.img_limit = img_limit
         self.reset()
         
     def reset(self):       
@@ -231,6 +231,7 @@ class Logger:
             
     def time_by_log(self):
         rta, igt, waste, first, last, w_last = 0, 0, 0, 0, 0, 0
+        t, first_t = 0.0, 0.0
         log = copy.copy(self.run_log)
         start = len(log)
 
@@ -247,11 +248,12 @@ class Logger:
 
         # Tally the frame-counts of RTA, IGT, and WASTE timing, for all runs in the log.
         for entry in log:
-            for action in entry[4]:
-                frame = entry[5]
+            for action in entry[4]:     # list of recorded actions
+                frame = entry[5]        # frame number event took place on
                 if action == "split":
                     rta = frame - first
                     igt += frame - last
+                    t = entry[7] - first_t
                     last = frame
                 elif action == "pause":
                     w_last = frame
@@ -260,15 +262,20 @@ class Logger:
                     last = frame
                 elif action == "start":
                     first, last = frame, frame
+                    first_t = entry[7]     # time event took place, in seconds
                     igt, waste, w_last = 0, 0, 0
-        return rta, igt, waste
+        return rta, igt, waste, t
     
     def print_times(self, rate):
-        rta, igt, waste = self.time_by_log()
+        rta, igt, waste, t = self.time_by_log()
         if rta != 0:
             tally_out = f"RTA: {secs_to_hms(rta / rate)}({rta}) " \
                         f"IGT: {secs_to_hms(igt / rate)}({igt}) " \
-                        f"WASTE: {secs_to_hms(waste / rate)}({waste})\r\n"
+                        f"WASTE: {secs_to_hms(waste / rate)}({waste}) " \
+                        f"[raw time: {secs_to_hms(t)}]\r\n"
+            drop = round(t * rate - rta, 1)
+            if drop > 0:
+                tally_out += f"Estimated frame(s) dropped: {drop}\r\n"
             print(tally_out)
 
 
@@ -283,12 +290,12 @@ class KeyInput:
         elif event.event_type == keyboard.KEY_UP:
             self.keys_down = {}
 
-        if mainloop.live_run:
+        if engine.live_run:
             if self.keys_down == settings.reset_key:
-                mainloop.reset()
+                engine.reset()
                 print(f"RESET ({self.keys_down})")
             if self.keys_down == settings.video_key:
-                mainloop.live_run = False
+                engine.live_run = False
 
 
 class Engine:
@@ -408,6 +415,9 @@ class Engine:
                 self.log.log_event(self.cur_pack.name, self.cycle, self.cur_pack.match_actions, self.frame_count,
                                    self.fps_timer.avg(self.frame_limit), self.lastshot, self.rawshot, cur_match)
                 print(f"{self.log.event_num}: Matched {self.cur_pack.name} on {self.frame_count}")
+                self.va_win.timeline.add_cursor(self.frame_count, self.frame_count)
+                self.va_win.timeline.cursors[self.frame_count].configure(bg='green', width=1)
+                self.va_win.timeline.cursors[self.frame_count].disable()
 
         elif not cur_match[0]:  # If UnMatch Cycle and no match found
             if self.cur_pack.unmatch_packs is not None:
@@ -420,6 +430,9 @@ class Engine:
                                            self.rawshot, cur_match)
                         self.fps_timer.split()
                         print(f"{self.log.event_num}: Unmatched to {self.cur_pack.name} on {self.frame_count}")
+                        self.va_win.timeline.add_cursor(self.frame_count, self.frame_count)
+                        self.va_win.timeline.cursors[self.frame_count].configure(bg='yellow', width=1)
+                        self.va_win.timeline.cursors[self.frame_count].disable()
                         return
             self.cycle = True
             nm_actions = self.cur_pack.nomatch_actions
@@ -427,6 +440,9 @@ class Engine:
             self.log.log_event(self.cur_pack.name, self.cycle, nm_actions, self.frame_count,
                                self.fps_timer.avg(self.frame_limit), self.lastshot, self.rawshot, cur_match)
             print(f"{self.log.event_num}: NoMatched to {self.cur_pack.nomatch_pack.name} on {self.frame_count}")
+            self.va_win.timeline.add_cursor(self.frame_count, self.frame_count)
+            self.va_win.timeline.cursors[self.frame_count].configure(bg='purple', width=1)
+            self.va_win.timeline.cursors[self.frame_count].disable()
 
     def console_logging(self, cur_match, output=False):
         self.fps_timer.split()
@@ -455,15 +471,8 @@ class Engine:
             self.run()
 
         # Video processing.
-        loc = input("Enter location of video file: ")
-        first = input("Start frame? (none for zero): ")
-        last = input("Last frame? (none for all): ")
-        first = 0 if first == "" else int(first)
-        last = None if last == "" else int(last)
-        self.video(loc, first, last)
-
-        print("\r\n")
-        wait = input("...Press Enter to exit...")
+        self.va_win = VideoAnalyzer(self)
+        self.va_win.mainloop()
 
     def run(self):
         self.lastshot = self.rawshot        # Hold previous shot for logging.
@@ -500,7 +509,7 @@ class Engine:
         total_frames = end - start
         tenth_frames = int(total_frames / 10)
         iter_frames = 1
-        self.frame_count = 0
+        self.frame_count = start
 
         has_frames, frame = video.read()
         video.set(cv2.CAP_PROP_POS_FRAMES, start)
@@ -534,9 +543,15 @@ class Engine:
             has_frames, frame = video.read()
             self.fps_timer.split()
 
+            self.va_win.screen.draw_frame(self.frame_count, 1/5)
+            self.va_win.timeline.move_to(self.va_win.timeline.cursors["scrubber"], self.frame_count)
+            self.va_win.update()
+
         vid_timer.stop()
         self.log.generate(rate)
-        print(f"\r\nVideo Analysis took: {vid_timer.last()} of duration: {total_frames / rate}")
+        print(f"\r\nVideo Analysis took: {secs_to_hms(vid_timer.last())} of duration: "
+              f"{secs_to_hms(total_frames / rate)}")
+        self.log.reset()
 
 
 #   ~~~Instantiate Objects~~~
@@ -546,8 +561,8 @@ settings = SettingsAccess("settings.cfg")
 file = FileAccess('clustertruck.rp')
 
 livesplit = LivesplitClient()
-mainloop = Engine()
+engine = Engine()
 livesplit.connect("localhost", 16834)
 
 #   ~~~Let's Go!~~~
-mainloop.run_loop()
+engine.run_loop()

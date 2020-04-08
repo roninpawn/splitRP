@@ -97,9 +97,9 @@ Crop = 416:0, 670:117
 Resize = .1
 
 [Pause]
-Images = pause_lc.png
-Match = 91
-Unmatch = 90
+Images = pause_lc.png|pause_lc2.png
+Match = 94
+Unmatch = 93
 Crop = 801:365,317:77
 Resize = .1
 Color = thresh:60
@@ -121,7 +121,7 @@ Nomatch = Running
 NoMatchAction = Start
 
 [Pre Run]
-Match = Main Dark, Main Light, Menu Dark, Menu Light, LS Dark, LS Light
+Match = Menu Dark, Menu Light, LS Dark, LS Light
 Unmatch = Run Select
 NoMatch = Run Select
 
@@ -144,7 +144,7 @@ NoMatch = Running
 NoMatchAction = Unpause
 
 [LC Pause Exit]
-Match = Main Light, Main Dark, Menu Dark, Menu Light, LS Dark Drop, LS Light Drop
+Match = Main Light, Main Dark, LS Dark Drop, LS Light Drop
 NoMatch = LS Re-Enter
 
 [Menu Re-Enter]
