@@ -3,6 +3,7 @@ import cv2
 import PIL.Image, PIL.ImageTk
 from tkinter import filedialog
 from math import floor
+from sys import exit
 import time
 
 

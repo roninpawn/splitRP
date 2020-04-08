@@ -499,6 +499,7 @@ class Engine:
         self.frame_count += 1
 
     def video(self, path, start=0, end=None):
+        self.reset()
         video = cv2.VideoCapture(path)
         rate = video.get(cv2.CAP_PROP_FPS)
         total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
