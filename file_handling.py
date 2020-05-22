@@ -29,10 +29,10 @@ def processing(img, color=None, resize=None, crop=None):
         # Grayscale by luminance. Y of XYZ = Luminance. Extract Y channel.
         img = cv2.cvtColor(img, cv2.COLOR_BGR2XYZ)
         img = img[:, :, 1]
-        if type(color) is int:
+        if type(color) is int:      # Thresh to black/white
             (thresh, img) = cv2.threshold(img, color, 255, cv2.THRESH_BINARY)
     if resize is not None:
-        img = cv2.resize(img, None, None, resize[0], resize[1], cv2.INTER_AREA)
+        img = cv2.resize(img, None, None, resize[0], resize[1], cv2.INTER_NEAREST)      # Changed from INTER_AREA.
     return img
 
 

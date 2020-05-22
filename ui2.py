@@ -32,12 +32,19 @@ class VideoAnalyzer(tk.Tk):
         file.add_command(label="Exit", command=exit)
         menu.add_cascade(label="File", menu=file)
         # --- Screen ---
-        self.screen = VideoPlayer(self, width=800, height=450, bg='black')
-        self.screen.pack(padx=5, pady=5, side=tk.TOP)
+        topframe = tk.Frame(self, pady=10, bg='darkblue')
+        self.screen = VideoPlayer(topframe, width=800, height=450, bg='black')
+        self.screen.pack(padx=5, side=tk.LEFT)
+        # --- Right Bar ---
+        self.rundata = ScrollablePane(topframe, 200, 450, auto=(True, True))
+        self.rundata.pack(padx=5, side=tk.RIGHT)
+        self.rundata.update()
+        topframe.pack(side=tk.TOP, expand=tk.TRUE, fill=tk.BOTH)
+
         # --- Timeline ---
         trough_wrap = tk.Frame(self, width=800, padx=5, pady=5, bg='lightblue')
         self.timeline = Timeline(trough_wrap, width=800, height=50, bg='darkgray')
-        self.timeline.pack(padx=5, pady=3, side=tk.TOP)
+        self.timeline.pack(padx=5, pady=3, side=tk.BOTTOM)
         self.timeline.link_player(self.screen)
         # --- Labels ---
         self.in_lbl = tk.Label(trough_wrap, text=f"IN: {0}", font=("", 12), bg='lightblue')
@@ -83,6 +90,9 @@ class VideoAnalyzer(tk.Tk):
 
     def analyze(self):
         self.analyze_button.configure(state=tk.DISABLED)
+        for widget in self.rundata.inner.winfo_children():
+            widget.destroy()
+        self.rundata.inner.update()
         [cursor.place_forget() for name, cursor in self.timeline.cursors.items() if type(name) is int]
         self.timeline.add_cursor("scrubber", self.mark_in)
         self.timeline.cursors["scrubber"].configure(bg='red', width=1)
@@ -91,6 +101,15 @@ class VideoAnalyzer(tk.Tk):
         [cursor.enable() for name, cursor in self.timeline.cursors.items() if type(name) is not int]
         self.timeline.cursors["scrubber"].place_forget()
         self.analyze_button.configure(state=tk.ACTIVE)
+
+    def add_data_entry(self, text):
+        w = self.rundata.inner_width-self.rundata.v_scroll.winfo_width()
+        frame1 = tk.Frame(self.rundata.inner, bg='purple', width=w, bd=2, relief='ridge')
+        data1 = tk.Label(self.rundata.inner, bg='pink', justify=tk.LEFT, anchor=tk.W)
+        data1.configure(text=text)
+        data1.configure(wraplength=w)
+        data1.pack(anchor=tk.NW, expand=tk.TRUE, fill=tk.X)
+        frame1.pack(fill=tk.X, expand=1)
 
 
 class VideoPlayer(tk.Canvas):
@@ -198,3 +217,4 @@ class Cursor(Draggable):
     def mouseDrag(self, event):
         self.master.cursor_move(self, event)
         self.function()
+
