@@ -22,6 +22,11 @@ def xywh2dict(x, y, w, h): return {'left': x, 'top': y, 'width': w, 'height': h}
 def dict2xywh(d): return [d["left"], d["top"], d["width"], d["height"]]
 
 
+def dict_scale(screen_dict, h, w):
+    coords = dict2xywh(screen_dict)
+    return xywh2dict(int(coords[0] * w), int(coords[1] * h), int(coords[2] * w), int(coords[3] * h))
+
+
 def processing(img, color=None, resize=None, crop=None):
     if crop is not None:
         img = img[crop["top"]:crop["top"] + crop["height"], crop["left"]:crop["left"] + crop["width"]]
@@ -49,12 +54,8 @@ class Test:
         self.images = []
 
     def conform_crop(self, area, resize):       # Adjust self.crop_area relative to 'area' given.
-        def scale(screen_dict, h, w):
-            coords = dict2xywh(screen_dict)
-            return xywh2dict(int(coords[0] * w), int(coords[1] * h), int(coords[2] * w), int(coords[3] * h))
-
         if self.crop_area is not None:
-            self.crop_area = scale(self.crop_area, resize[1], resize[0])
+            self.crop_area = dict_scale(self.crop_area, resize[1], resize[0])
             if area["left"] + area["width"] > self.crop_area["left"] >= area["left"]:
                 self.crop_area["left"] -= area["left"]
             else:
@@ -102,6 +103,16 @@ class FileAccess:
         self.resolution = [int(n) for n in self.cfg["Settings"]["NativeResolution"].replace(" ", "").split("x")]
         self.master_crop = xywh2dict(
             *[int(n) for n in self.cfg["Settings"]["ScreenshotArea"].replace(" ", "").replace(":", ",").split(",")])
+
+        if "Translate" in self.cfg["Settings"].keys():
+            self.translation = [int(n) for n in self.cfg["Settings"]["Translate"].replace(" ", "").split("x")]
+        else:
+            self.translation = [0, 0]
+        if "ReScale" in self.cfg["Settings"].keys():
+            self.rescale_values = [int(n) for n in self.cfg["Settings"]["ReScale"].replace(" ", "").split("x")]
+        else:
+            self.rescale_values = None
+
         self.directory = f"images\\{self.cfg['Settings']['ImageDirectory'].strip()}\\"
         self.runlog = int(self.cfg["Settings"]["RunLogging"].strip())
 
@@ -172,15 +183,11 @@ class FileAccess:
         return TestPack(name, match, match_actions, match_send, unmatch, nomatch, nomatch_actions, nomatch_send)
 
     def convert(self, resolution):
-        def scale(screen_dict, h, w):
-            coords = dict2xywh(screen_dict)
-            return xywh2dict(int(coords[0] * w), int(coords[1] * h), int(coords[2] * w), int(coords[3] * h))
-
         if resolution["height"] != self.resolution[1] or resolution["width"] != self.resolution[0]:
             print("Resizing values to different resolution.")
             dif_h = resolution["height"] / self.resolution[1]
             dif_w = resolution["width"] / self.resolution[0]
-            self.master_crop = scale(self.master_crop, dif_h, dif_w)
+            self.master_crop = dict_scale(self.master_crop, dif_h, dif_w)
 
             if '{0:.3f}'.format(dif_h) != '{0:.3f}'.format(dif_w):
                 print("[Warning: Screen resolution does not match aspect ratio of tests.\r\n"

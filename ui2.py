@@ -14,6 +14,27 @@ def array2tk(array, width, height):
     return out
 
 
+def time_to_hms(t):
+    return f"{time.strftime('%H:%M:%S', time.localtime(t))}.{repr(t).split('.')[1][:3]}"
+
+
+def secs_to_hms(dur):
+    if dur <= 0:
+        return "0.000"
+    else:
+        h = dur // 3600
+        dur -= h * 3600
+        m, s = divmod(int(dur), 60)
+        ms = '{:.03f}'.format(dur)[-3:]
+        out = f"{h}:" if h > 0 else ""
+        out += f"{'{:02d}'.format(m)}:{'{:02d}'.format(s)}.{ms}" if m > 0 else f"{s}.{ms}"
+        return out
+
+
+def frames_to_hms(f, rate):
+    return secs_to_hms(f / rate)
+
+
 class VideoAnalyzer(tk.Tk):
     def __init__(self, engine):
         self.engine = engine
@@ -59,7 +80,6 @@ class VideoAnalyzer(tk.Tk):
 
         trough_wrap.pack(side=tk.TOP)
 
-
     def update_inout(self):
         if self.screen.total_frames > 0:
             m_in = self.timeline.cursors['in'].frame
@@ -80,6 +100,7 @@ class VideoAnalyzer(tk.Tk):
                                               filetypes=(("MP4s", "*.mp4"), ("all files", "*.*")))
         if filename is not "":
             self.screen.load_video(filename)
+            self.rundata.empty()
             self.timeline.reset()
             self.timeline.set_frames(self.screen.total_frames)
             self.timeline.add_cursor("in", 0, self.update_inout)
@@ -90,9 +111,7 @@ class VideoAnalyzer(tk.Tk):
 
     def analyze(self):
         self.analyze_button.configure(state=tk.DISABLED)
-        for widget in self.rundata.inner.winfo_children():
-            widget.destroy()
-        self.rundata.inner.update()
+        self.rundata.empty()
         [cursor.place_forget() for name, cursor in self.timeline.cursors.items() if type(name) is int]
         self.timeline.add_cursor("scrubber", self.mark_in)
         self.timeline.cursors["scrubber"].configure(bg='red', width=1)
@@ -102,14 +121,43 @@ class VideoAnalyzer(tk.Tk):
         self.timeline.cursors["scrubber"].place_forget()
         self.analyze_button.configure(state=tk.ACTIVE)
 
-    def add_data_entry(self, text):
+    def pop_splits(self, splits, rate):
+        sum_rta, sum_igt, sum_waste = 0, 0, 0
+        for split in splits:
+            num, rta, igt, waste, start = split
+
+            sum_rta = sum_rta + rta[0]
+            sum_igt = sum_igt + igt[0]
+            sum_waste = sum_waste + waste[0]
+
+            rta_time = frames_to_hms(rta[0], rate)
+            igt_time = frames_to_hms(igt[0], rate)
+            waste_time = frames_to_hms(waste[0], rate)
+
+            out = f"- {num} -  ({frames_to_hms(sum_rta, rate)} | {frames_to_hms(sum_igt, rate)})\n" \
+                f"          RTA: {rta_time} ({rta[0]})\n" \
+                f"          IGT: {igt_time} ({igt[0]})\n" \
+                f"          WASTE: {waste_time} ({waste[0]})"
+
+            self.add_text_entry(out)
+            self.timeline.add_block(start + waste[0], start + waste[0] + igt[0])
+
+        out = f"-TOTAL -\n" \
+            f"          RTA: {frames_to_hms(sum_rta, rate)} ({sum_rta})\n" \
+            f"          IGT: {frames_to_hms(sum_igt, rate)} ({sum_igt})\n" \
+            f"          WASTE: {frames_to_hms(sum_waste, rate)} ({sum_waste})"
+
+        self.add_text_entry(out)
+
+    def add_text_entry(self, text):
+        # Text to scroll frame
         w = self.rundata.inner_width-self.rundata.v_scroll.winfo_width()
         frame1 = tk.Frame(self.rundata.inner, bg='purple', width=w, bd=2, relief='ridge')
-        data1 = tk.Label(self.rundata.inner, bg='pink', justify=tk.LEFT, anchor=tk.W)
+        data1 = tk.Label(self.rundata.inner, bg='yellow', justify=tk.LEFT, anchor=tk.W)
         data1.configure(text=text)
         data1.configure(wraplength=w)
         data1.pack(anchor=tk.NW, expand=tk.TRUE, fill=tk.X)
-        frame1.pack(fill=tk.X, expand=1)
+        frame1.pack(fill=tk.X, expand=tk.TRUE)
 
 
 class VideoPlayer(tk.Canvas):
@@ -147,11 +195,14 @@ class Timeline(Backgroundable):
         self.set_frames(frames, width)
         self.cursor_width = cursor_width if cursor_width < width else width - 1
         self.cursors = {}
+        self.blocks = {}
         self._player = None
 
     def reset(self):
         for c in self.cursors.values():
-            c.place_forget()
+            c.destroy()
+        for b in self.blocks.values():
+            b.destroy()
         self.cursors = {}
 
     def link_player(self, player):
@@ -198,6 +249,14 @@ class Timeline(Backgroundable):
             if frame > self._frames : frame = self._frames
             snap_x = floor(frame * self._frame_width)
             return snap_x, frame
+
+    def add_block(self, start, end):
+        x = start * self._frame_width
+        width = (end - start) * self._frame_width
+        new_trough = Backgroundable(self, width, self.height, bg='yellow')
+        new_trough.place(x=x, y=0)
+        new_trough.lower(self.cursors[list(self.cursors.keys())[0]])
+        self.blocks[start] = new_trough
 
 
 class Cursor(Draggable):

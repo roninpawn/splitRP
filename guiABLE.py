@@ -224,6 +224,11 @@ class Backgroundable(tk.Frame):
         self.inner.image_create(tk.END, image=self._img)
         self.inner.configure(state=tk.DISABLED)
 
+    def empty(self):
+        for child in self.inner.winfo_children():
+            child.destroy()
+        self.inner.configure(width=1, height=1)
+
 
 class Skinnable():
     def __init__(self, normal_path=None, hover_path=None, active_path=None, disabled_path=None):
