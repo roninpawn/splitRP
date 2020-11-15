@@ -78,8 +78,15 @@ class Test:
             img = cv2.resize(img, None, None, scale[0], scale[1], cv2.INTER_AREA)
             img = img[area["top"]: area["top"] + area["height"], area["left"]: area["left"] + area["width"]]
             img = processing(img, self.color_proc, self.resize, self.crop_area)
+
+            shape = np.shape(img)  # [Pixel height, width, (color channels)]
+            color_channels = 1 if len(shape) == 2 else shape[2]
+            depth = 255  # depth ought to be resolved based on data type? (uint8 = 255, float = 1?)
+            max_pixel_sum = shape[0] * shape[1] * color_channels * depth
+            img_sum = int(np.sum(img))  # Add all actual pixel values within image.
+
             #showImage(img)
-            self.images.append(img)
+            self.images.append([img, img_sum, max_pixel_sum])
 
 
 class TestPack:
@@ -97,8 +104,9 @@ class TestPack:
 
 class FileAccess:
     def __init__(self, filename):
+        self.path = resource_path(filename)
         self.cfg = configparser.ConfigParser(inline_comment_prefixes="#")
-        self.cfg.read_file(open(resource_path(filename)))
+        self.cfg.read_file(open(self.path))
 
         self.resolution = [int(n) for n in self.cfg["Settings"]["NativeResolution"].replace(" ", "").split("x")]
         self.master_crop = xywh2dict(
@@ -184,14 +192,9 @@ class FileAccess:
 
     def convert(self, resolution):
         if resolution["height"] != self.resolution[1] or resolution["width"] != self.resolution[0]:
-            print("Resizing values to different resolution.")
             dif_h = resolution["height"] / self.resolution[1]
             dif_w = resolution["width"] / self.resolution[0]
             self.master_crop = dict_scale(self.master_crop, dif_h, dif_w)
-
-            if '{0:.3f}'.format(dif_h) != '{0:.3f}'.format(dif_w):
-                print("[Warning: Screen resolution does not match aspect ratio of tests.\r\n"
-                      "          No guarantees on this working.]")
         else:
             dif_h, dif_w = 1.0, 1.0
         for test in self.tests.values():

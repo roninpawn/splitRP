@@ -22,7 +22,7 @@ def secs_to_hms(dur):
     if dur <= 0:
         return "0.000"
     else:
-        h = dur // 3600
+        h = floor(dur / 3600)
         dur -= h * 3600
         m, s = divmod(int(dur), 60)
         ms = '{:.03f}'.format(dur)[-3:]

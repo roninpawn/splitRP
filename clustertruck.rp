@@ -4,7 +4,7 @@ ScreenshotArea = 416:0,670:517
 # Translate = 200x0
 # ReScale = 1705x960
 ImageDirectory = Clustertruck
-RunLogging = 2
+RunLogging = 0
 
 Tests = Menu Light, Menu Dark, LS Dark, LS Light, LS Dark Drop, LS Light Drop, Level Complete, Pause,
         Main Light, Main Dark
@@ -92,7 +92,7 @@ Crop = 416:470,670:47
 Color = thresh:55
 
 [Level Complete]
-Images = lc1.png|lc2.png|lc3.png|lc4.png|lc5.png|lc6.png|lc7.png
+Images = lc1.png|lc2.png|lc3.png|lc4.png|lc5.png|lc6.png|lc7.png|lc8.png
 Match = 96
 Unmatch = 93
 Crop = 416:0, 670:117
