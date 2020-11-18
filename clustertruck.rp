@@ -4,7 +4,7 @@ ScreenshotArea = 416:0,670:517
 # Translate = 200x0
 # ReScale = 1705x960
 ImageDirectory = Clustertruck
-RunLogging = 0
+RunLogging = 1
 
 Tests = Menu Light, Menu Dark, LS Dark, LS Light, LS Dark Drop, LS Light Drop, Level Complete, Pause,
         Main Light, Main Dark
