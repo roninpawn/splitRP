@@ -1,65 +1,28 @@
 import keyboard
-import multiprocessing as multiproc
 from file_handling import *
 from ui2 import *
-from functools import partial
+from videostream import *
 
 
 #   ~~~Define Public Functions~~~
-def mp_test(vid_path, rp_path, start, end):   # Initiates multiprocessing and returns Points of Interest list.
-    poi_list = []
-    if __name__ == "__main__":
-        total_workers = multiproc.cpu_count()
-        mp_pool = multiproc.Pool(total_workers)
-        poi_func = partial(poi_test, vid_path, rp_path, start, end)   # Necessary for static + iterable args.
-        poi_list = mp_pool.map(poi_func, range(total_workers))
-        mp_pool.close()
-        mp_pool.join()
-
-        poi_list = [j for sub in poi_list for j in sub]     # Flattens 3d list to 2d list
-    return poi_list
-
-
-def poi_test(vid_path, file_path, start, end, worker_num):
-    video = cv2.VideoCapture(vid_path)   # Each worker instantiates it's own hook to video and a new FileAccess object.
-    file = FileAccess(file_path)
-
-    total_frames = end - start           # Each worker calculates it's own job-scope based on it's worker-number.
-    total_workers = multiproc.cpu_count()
-    frames_per_worker = floor(total_frames / total_workers)
-    start = start + (worker_num * frames_per_worker)
-    end = start + frames_per_worker
-
-    if file.rescale_values is None:      # Pattern file's values / tests / images are conformed to the video properties.
-        res = int(video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    else:
-        res = file.rescale_values
-    file.convert(xywh2dict(0, 0, res[0], res[1]))
-    file.init_packs()
-    file.master_crop['left'] += file.translation[0]
-    file.master_crop['top'] += file.translation[1]
-    crop = dict2xywh(file.master_crop)
-
-    video.set(cv2.CAP_PROP_POS_FRAMES, start)   # Move play-head to starting frame.
-
+def poi_test(vid_stream, rp_file):
     poi_list = []
     last_matched_tests = []
-    cur_frame = start
     dismissed = 0   # Records how many Diff Tests were avoided using Sum Testing.
     total_tests = 0
 
     # Process ALL frames assigned to worker
-    while cur_frame < end:
+    while True:
+        eof, frame = vid_stream.read()
+        if eof: break
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
         matched_tests = {}
         last_proc = []
 
-        has_frames, frame = video.read()        # Read and prep frame for analysis.
-        frame = frame[crop[1]:crop[1] + crop[3], crop[0]:crop[0] + crop[2]]
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
-
         # Test current frame against ALL possible matches in file.tests.
-        for test_name in file.tests:
-            test = file.tests[test_name]
+        for test_name in rp_file.tests:
+            test = rp_file.tests[test_name]
             if last_proc != [test.color_proc, test.resize, test.crop_area]:     # Don't reprocess frame if unnecessary.
                 shot = processing(frame, test.color_proc, test.resize, test.crop_area)
                 shot_sum = int(np.sum(shot))
@@ -80,16 +43,15 @@ def poi_test(vid_path, file_path, start, end, worker_num):
 
             last_proc = [test.color_proc, test.resize, test.crop_area]
 
-        if len(matched_tests) and matched_tests != last_matched_tests \
+        if len(matched_tests) and matched_tests.keys() != last_matched_tests \
                 or len(last_matched_tests) and not len(matched_tests):  # Only record changes. So, if the same test(s)
-            poi_list.append((cur_frame, matched_tests))                 # match sequentially, don't record it. But if
+            poi_list.append((vid_stream.cur_frame, matched_tests))           # match sequentially, don't record it. But if
                                                                         # different test(s) match, or no match found
-        last_matched_tests = matched_tests                              # in wake of matches, make a new record.
-        cur_frame += 1
+        last_matched_tests = matched_tests.keys()                       # in wake of matches, make a new record.
 
-    video.release()
-    # print(f"Worker #{worker_num} stored {len(poi_list)} frame events. Dismissed {dismissed} of {total_tests}"
-    #       f"({round(100 * (dismissed / total_tests), 2)}%) by sum-testing.")
+    time.sleep(.1)  # Makes space for clean console logging.
+    print(f"\nStored {len(poi_list)} frame events. Dismissed {dismissed} of {total_tests}"
+          f"({round(100 * (dismissed / total_tests), 2)}%) by sum-testing.")
     return poi_list
 
 
@@ -220,14 +182,16 @@ class Logger:
                 last = event.frame
             print(f"--- LOG END ---\r\n")
 
-    def write_images(self):
+    def write_images(self, vid_path):
         if file.runlog:
-            for num, event, images in self.run_log:
-                if images is not None:
-                    cv2.imwrite(f'runlog/{num}a.png', images[0])
-                    cv2.imwrite(f'runlog/{num}b.png', images[1])
-                    if file.runlog == 2:
-                        cv2.imwrite(f'runlog/{num}c.png', event.image)
+            video = cv2.VideoCapture(vid_path)
+            for num, event in self.run_log:
+                video.set(cv2.CAP_PROP_POS_FRAMES, event.frame-1)
+                has_frames, pre_frame = video.read()
+                has_frames, match_frame = video.read()
+                cv2.imwrite(f'runlog/{num}a.png', pre_frame)
+                cv2.imwrite(f'runlog/{num}b.png', match_frame)
+            video.release()
             
     def gen_splits(self):
         splits = []
@@ -319,25 +283,24 @@ class KeyInput:
 
 
 class Engine:
-    def __init__(self):
+    def __init__(self, rp_path):
         if __name__ == "__main__":
             self.frame_rate = 1
             self.log = Logger()
+            self.rp_path = rp_path
+            self.file = FileAccess(rp_path)
             # self.key_input = KeyInput()
 
             self.reset()
 
-            # Wait for first screenshot to be captured:
-
             self.va_win = VideoAnalyzer(self)
             self.va_win.mainloop()
-            print("Started and ready...")
 
     def reset(self):
         self.log.generate(self.frame_rate)
         self.log.reset()
 
-        self.cur_pack = file.first_pack
+        self.cur_pack = self.file.first_pack
         self.cycle = True
 
     def analyze(self, poi_list):
@@ -378,34 +341,46 @@ class Engine:
         process_timer = Timer()
         process_timer.start()
 
-        video = cv2.VideoCapture(vid_path)
-        self.frame_rate = round(video.get(cv2.CAP_PROP_FPS), 2)
-        total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
-        video.release()
+        video = VideoStream(vid_path)
+        self.file = FileAccess(self.rp_path)
 
-        if end is None or end > total_frames:
-            end = total_frames
+        if end is None or end > video.total_frames:
+            end = video.total_frames
         total_frames = end - start
 
-        print(f"\r\nVideo analysis of {total_frames} frames in {vid_path} @ {self.frame_rate}fps now running.")
-        poi_list = mp_test(vid_path, file.path, start, end)
-        print(f"POI list contains {len(poi_list)} frame events. [Generated in: {secs_to_hms(process_timer.now())}]")
+        self.frame_rate = video.frame_rate
+        rounded_frame_rate = round(self.frame_rate, 3)
 
-        file.init_packs()
-        self.cur_pack = file.first_pack
+        res = video.shape() if self.file.rescale_values is None else self.file.rescale_values
+        self.file.convert(xywh2dict(0, 0, res[0], res[1]))
+        self.file.init_packs()
+        self.file.master_crop['left'] += self.file.translation[0]
+        self.file.master_crop['top'] += self.file.translation[1]
+
+        video.config(start, end, dict2xywh(self.file.master_crop))
+        video.open_stream()
+
+        print(f"\r\nVideo analysis of {total_frames} frames in {vid_path} @ ~{rounded_frame_rate}fps now running.")
+        poi_list = poi_test(video, self.file)
+        print(f"[Generated poi_list in: {secs_to_hms(process_timer.now())} seconds.]")
+
+        self.cur_pack = self.file.first_pack
         self.analyze(poi_list)
         self.log.generate(self.frame_rate)
 
         self.va_win.pop_splits(self.log.splits, self.frame_rate)
-        print(f"\r\nVideo analysis of {total_frames} frames in {vid_path} @ {self.frame_rate}fps complete.")
-        print(f"Analysis took: {secs_to_hms(process_timer.now())} of duration: "
+        print(f"\r\nVideo analysis of {total_frames} frames in {vid_path} @ ~{rounded_frame_rate}fps complete.")
+        print(f"Full Analysis took: {secs_to_hms(process_timer.now())} of duration: "
               f"{secs_to_hms(total_frames / self.frame_rate)}")
+
+        # self.log.write_images(vid_path)
+        # if self.file.runlog:
+        #     print(f"Images stored and entire process complete in: {secs_to_hms(process_timer.now())}")
         process_timer.stop()
 
 
 #   ~~~Instantiate Objects~~~
 settings = SettingsAccess("settings.cfg")
-file = FileAccess('clustertruck.rp')        # NEEDS INSTANTIATED IN OBJECT W/ RESET ACROSS MULTIPLE TESTS.
 
 #   ~~~Let's Go!~~~
-engine = Engine()
+engine = Engine('clustertruck.rp')

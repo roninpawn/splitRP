@@ -6,13 +6,6 @@ import cv2
 
 
 # Public Functions
-def showImage(img, wait=0):
-    cv2.imshow("imgWin", img)
-    cv2.moveWindow("imgWin", 0, 0)  # Move it to (40,30)
-    cv2.waitKey(wait)
-    cv2.destroyAllWindows()
-
-
 def resource_path(relative_path): return os.path.join(os.path.abspath("."), relative_path)
 
 
@@ -85,7 +78,6 @@ class Test:
             max_pixel_sum = shape[0] * shape[1] * color_channels * depth
             img_sum = int(np.sum(img))  # Add all actual pixel values within image.
 
-            #showImage(img)
             self.images.append([img, img_sum, max_pixel_sum])
 
 
@@ -111,6 +103,10 @@ class FileAccess:
         self.resolution = [int(n) for n in self.cfg["Settings"]["NativeResolution"].replace(" ", "").split("x")]
         self.master_crop = xywh2dict(
             *[int(n) for n in self.cfg["Settings"]["ScreenshotArea"].replace(" ", "").replace(":", ",").split(",")])
+        if self.master_crop['width'] % 2 > 0:
+            self.master_crop['width'] -= 1
+        if self.master_crop['height'] % 2 > 0:
+            self.master_crop['height'] -= 1
 
         if "Translate" in self.cfg["Settings"].keys():
             self.translation = [int(n) for n in self.cfg["Settings"]["Translate"].replace(" ", "").split("x")]
