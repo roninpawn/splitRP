@@ -1,8 +1,8 @@
 [Settings]
 NativeResolution = 1920x1080
 ScreenshotArea = 416:0,670:517
-# Translate = 200x0
-# ReScale = 1705x960
+# Translate = 62x34
+# ReScale = 1158x650
 ImageDirectory = Clustertruck
 RunLogging = 1
 
@@ -65,8 +65,8 @@ Color = thresh:200
 
 [LS Light]
 Images = sel1.png|sel1b.png
-Match = 75          # 82
-Unmatch = 74        # 70
+Match = 70          # 82
+Unmatch = 66        # 70
 Crop = 416:470,670:47
 Color = thresh:138
 

@@ -30,7 +30,9 @@ class VideoStream:
         self.cur_frame = self.start
 
     def config(self, start=None, end=None, xywh=None):
-        if start is not None: self.start = start
+        if start is not None:
+            self.start = start
+            self.cur_frame = self.start
         if end is not None: self.end = end
         self.total_frames = self.end - self.start
         if xywh is not None: self.xywh = xywh
@@ -49,7 +51,10 @@ class VideoStream:
             self.xywh = out
 
     def open_stream(self):
+        print("OPENING STREAM:", self.start, self.end)
         self._even_test()
+        self.cur_frame = self.start
+
         self._raw = (ffmpeg
                      .input(self.path)
                      .crop(x=self.xywh[0], y=self.xywh[1], width=self.xywh[2], height=self.xywh[3])
@@ -81,7 +86,7 @@ class VideoStream:
 # video = VideoStream(path, xywh=crop)
 # start = 10
 # end = video.total_frames - 10     # Init'ing the VideoStream without start/end configurations allows programmatic
-# video.config(start, end)          # methods using the ffprobe information spawned at creation. (not necessary)
+# video.config(start, end)          # methods using the ffprobe information spawned at creation. (not required)
 #
 # start = time()
 # video.open_stream()

@@ -8,6 +8,7 @@ from videostream import *
 def poi_test(vid_stream, rp_file):
     poi_list = []
     last_matched_tests = []
+    prev_frame = []
     dismissed = 0   # Records how many Diff Tests were avoided using Sum Testing.
     total_tests = 0
 
@@ -17,6 +18,7 @@ def poi_test(vid_stream, rp_file):
         if eof: break
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+        if not len(prev_frame): prev_frame = frame  # On first frame only, set last_frame = current frame.
         matched_tests = {}
         last_proc = []
 
@@ -43,11 +45,13 @@ def poi_test(vid_stream, rp_file):
 
             last_proc = [test.color_proc, test.resize, test.crop_area]
 
+        # Only record changes: Don't record same test(s) sequentially. Only if different, or no match after match.
         if len(matched_tests) and matched_tests.keys() != last_matched_tests \
-                or len(last_matched_tests) and not len(matched_tests):  # Only record changes. So, if the same test(s)
-            poi_list.append((vid_stream.cur_frame, matched_tests))           # match sequentially, don't record it. But if
-                                                                        # different test(s) match, or no match found
-        last_matched_tests = matched_tests.keys()                       # in wake of matches, make a new record.
+                or len(last_matched_tests) and not len(matched_tests):
+            poi_list.append((vid_stream.cur_frame, matched_tests, (prev_frame, frame)))
+
+        last_matched_tests = matched_tests.keys()
+        prev_frame = frame
 
     time.sleep(.1)  # Makes space for clean console logging.
     print(f"\nStored {len(poi_list)} frame events. Dismissed {dismissed} of {total_tests}"
@@ -137,13 +141,14 @@ class Timer:
 
 
 class LogEvent:
-    def __init__(self, match_cycle, frame, event_name, match_percent, actions_taken):
+    def __init__(self, match_cycle, frame, event_name, match_percent, actions_taken, log_images):
         self.time = time.time()
         self.name = event_name
         self.actions = actions_taken
         self.cycle = match_cycle
         self.percent = match_percent
         self.frame = frame
+        self.log_images = log_images
 
     def as_string(self):
         return f"Frame {self.frame} with {'{0:.2f}'.format(self.percent)}% in " \
@@ -164,10 +169,10 @@ class Logger:
         self.output_log(frame_rate)
         self.splits = self.gen_splits()
         self.print_splits(self.splits, frame_rate)
-        #self.write_images()
+        self.write_images()
     
-    def log_event(self, cycle, frame, name, percent, actions):
-        new_log = LogEvent(cycle, frame, name, percent, actions)
+    def log_event(self, cycle, frame, name, percent, actions, log_images):
+        new_log = LogEvent(cycle, frame, name, percent, actions, log_images)
         self.run_log.append([self.event_num, new_log])
         self.event_num += 0.5
 
@@ -182,16 +187,11 @@ class Logger:
                 last = event.frame
             print(f"--- LOG END ---\r\n")
 
-    def write_images(self, vid_path):
-        if file.runlog:
-            video = cv2.VideoCapture(vid_path)
-            for num, event in self.run_log:
-                video.set(cv2.CAP_PROP_POS_FRAMES, event.frame-1)
-                has_frames, pre_frame = video.read()
-                has_frames, match_frame = video.read()
-                cv2.imwrite(f'runlog/{num}a.png', pre_frame)
-                cv2.imwrite(f'runlog/{num}b.png', match_frame)
-            video.release()
+    def write_images(self):
+        for num, event in self.run_log:
+            pre_frame, match_frame = event.log_images
+            cv2.imwrite(f'runlog/{num}a.png', pre_frame)
+            cv2.imwrite(f'runlog/{num}b.png', match_frame)
             
     def gen_splits(self):
         splits = []
@@ -309,7 +309,7 @@ class Engine:
             self.va_win.timeline.cursors[frame].configure(bg=color, width=1)
             self.va_win.timeline.cursors[frame].disable()
 
-        for frame, tests in poi_list:
+        for frame, tests, log_images in poi_list:
             match = bool(len(tests))
             if self.cycle:
                 if match:
@@ -318,7 +318,7 @@ class Engine:
                             # cycle, frame, pack_name, match percent, actions
                             draw_it(frame, 'green')
                             self.log.log_event(self.cycle, frame, self.cur_pack.name, tests[match_test.name],
-                                               self.cur_pack.match_actions)
+                                               self.cur_pack.match_actions, log_images)
                             self.cycle = False
             else:
                 if match:
@@ -328,11 +328,12 @@ class Engine:
                                 if unmatch_test in tests:
                                     draw_it(frame, 'pink')
                                     self.log.log_event(self.cycle, frame, self.cur_pack.name, tests[unmatch_test],
-                                                       self.cur_pack.unmatch_actions)
+                                                       self.cur_pack.unmatch_actions, log_images)
                                     self.cur_pack = pack
                 else:
                     draw_it(frame, 'purple')
-                    self.log.log_event(self.cycle, frame, self.cur_pack.name, 0, self.cur_pack.nomatch_actions)
+                    self.log.log_event(self.cycle, frame, self.cur_pack.name, 0,
+                                       self.cur_pack.nomatch_actions, log_images)
                     self.cycle = True
                     self.cur_pack = self.cur_pack.nomatch_pack
 
