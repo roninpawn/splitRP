@@ -3,22 +3,12 @@ NativeResolution = 1920x1080
 ScreenshotArea = 416:0,670:517
 # Translate = 62x34
 # ReScale = 1158x650
-ImageDirectory = Clustertruck
-RunLogging = 1
+ImageDirectory = images/Clustertruck
 
 Tests = Menu Light, Menu Dark, LS Dark, LS Light, LS Dark Drop, LS Light Drop, Level Complete, Pause,
         Main Light, Main Dark
 TestPacks = Run Select, Pre Run, Running, LC Pause, LC Re-Enter, LC Pause Exit, LS Re-Enter, Menu Re-Enter
-FirstPack =  Run Select
-
-
-# -- Livesplit Commands --
-
-[Commands]
-Start = setgametime 0.0\r\nstarttimer\r\n
-Split = split\r\n
-Pause = pausegametime\r\n
-Unpause = unpausegametime\r\n
+StartPack =  Run Select
 
 
 # -- Tests --

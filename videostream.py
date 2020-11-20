@@ -20,7 +20,7 @@ class VideoStream:
         self.frame_rate = rate[0] / rate[1]
         self.end = int(inspect['nb_frames']) if end is None else end
         self.total_frames = self.end - self.start
-        self.xywh = (0, 0, int(inspect['width']), int(inspect['height'])) if xywh is None else xywh
+        self.xywh = [0, 0, int(inspect['width']), int(inspect['height'])] if xywh is None else xywh
 
         self._frame_bytes = self.xywh[2] * self.xywh[3] * 3
         self._frame = []
@@ -40,10 +40,10 @@ class VideoStream:
     def shape(self): return self.xywh[-2:]
 
     def _even_test(self):
-        w, h = self.xywh[-2:]
+        w, h = self.xywh[2:]
         if w % 2 > 0: w -= 1
         if h % 2 > 0: h -= 1
-        out = (self.xywh[0], self.xywh[1], w, h)
+        out = [self.xywh[0], self.xywh[1], w, h]
         if out != self.xywh:
             warn("\n'width/height' VALUE IN 'xywh' IS NOT AN EVEN NUMBER\n(Forcing values to lower, even integer. "
                  "This may cause errors in operations that rely on matched resolutions.)\n")
@@ -51,7 +51,6 @@ class VideoStream:
             self.xywh = out
 
     def open_stream(self):
-        print("OPENING STREAM:", self.start, self.end)
         self._even_test()
         self.cur_frame = self.start
 
