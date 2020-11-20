@@ -35,7 +35,7 @@ def frames_to_hms(f, rate):
     return secs_to_hms(f / rate)
 
 
-class VideoAnalyzer(tk.Tk):
+class MainUI(tk.Tk):
     def __init__(self, engine):
         self.engine = engine
         self.mark_in, self.mark_out = 0, 0
@@ -116,7 +116,7 @@ class VideoAnalyzer(tk.Tk):
         self.timeline.add_cursor("scrubber", self.mark_in)
         self.timeline.cursors["scrubber"].configure(bg='red', width=1)
         [cursor.disable() for cursor in self.timeline.cursors.values()]
-        self.engine.video(self.screen.filename, self.mark_in, self.mark_out)
+        self.engine.analyze(self.screen.filename, start=self.mark_in, end=self.mark_out)
         [cursor.enable() for name, cursor in self.timeline.cursors.items() if type(name) is not int]
         self.timeline.cursors["scrubber"].place_forget()
         self.analyze_button.configure(state=tk.ACTIVE)
@@ -126,21 +126,21 @@ class VideoAnalyzer(tk.Tk):
         for split in splits:
             num, rta, igt, waste, start = split
 
-            sum_rta = sum_rta + rta[0]
-            sum_igt = sum_igt + igt[0]
-            sum_waste = sum_waste + waste[0]
+            sum_rta += rta
+            sum_igt += igt
+            sum_waste += waste
 
-            rta_time = frames_to_hms(rta[0], rate)
-            igt_time = frames_to_hms(igt[0], rate)
-            waste_time = frames_to_hms(waste[0], rate)
+            rta_time = frames_to_hms(rta, rate)
+            igt_time = frames_to_hms(igt, rate)
+            waste_time = frames_to_hms(waste, rate)
 
             out = f"- {num} -  ({frames_to_hms(sum_rta, rate)} | {frames_to_hms(sum_igt, rate)})\n" \
-                f"          RTA: {rta_time} ({rta[0]})\n" \
-                f"          IGT: {igt_time} ({igt[0]})\n" \
-                f"          WASTE: {waste_time} ({waste[0]})"
+                f"          RTA: {rta_time} ({rta})\n" \
+                f"          IGT: {igt_time} ({igt})\n" \
+                f"          WASTE: {waste_time} ({waste})"
 
             self.add_text_entry(out)
-            self.timeline.add_block(start + waste[0], start + waste[0] + igt[0])
+            self.timeline.add_block(start + waste, start + waste + igt)
 
         out = f"-TOTAL -\n" \
             f"          RTA: {frames_to_hms(sum_rta, rate)} ({sum_rta})\n" \
@@ -251,6 +251,13 @@ class Timeline(Backgroundable):
             return snap_x, frame
 
     def add_block(self, start, end):
+        def draw_cursor(frame, color):
+            self.add_cursor(frame, frame)
+            self.cursors[frame].configure(bg=color, width=1)
+            self.cursors[frame].disable()
+
+        draw_cursor(start, 'purple')
+        draw_cursor(end, 'green')
         x = start * self._frame_width
         width = (end - start) * self._frame_width
         new_trough = Backgroundable(self, width, self.height, bg='yellow')

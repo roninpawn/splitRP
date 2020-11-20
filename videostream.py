@@ -51,7 +51,6 @@ class VideoStream:
             self.xywh = out
 
     def open_stream(self):
-        print("OPENING STREAM:", self.start, self.end)
         self._even_test()
         self.cur_frame = self.start
 
