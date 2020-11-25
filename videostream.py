@@ -18,9 +18,11 @@ class VideoStream:
 
         rate = [float(s) for s in inspect['r_frame_rate'].split("/")]
         self.frame_rate = rate[0] / rate[1]
-        self.end = int(inspect['nb_frames']) if end is None else end
-        self.total_frames = self.end - self.start
-        self.xywh = [0, 0, int(inspect['width']), int(inspect['height'])] if xywh is None else xywh
+        self.total_frames = int(inspect['nb_frames'])
+        self.end = self.total_frames if end is None else end
+        self.frame_range = self.end - self.start
+        self.resolution = (int(inspect['width']), int(inspect['height']))
+        self.xywh = [0, 0, *self.resolution] if xywh is None else xywh
 
         self._frame_bytes = self.xywh[2] * self.xywh[3] * 3
         self._frame = []
@@ -34,7 +36,7 @@ class VideoStream:
             self.start = start
             self.cur_frame = self.start
         if end is not None: self.end = end
-        self.total_frames = self.end - self.start
+        self.frame_range = self.end - self.start
         if xywh is not None: self.xywh = xywh
 
     def shape(self): return self.xywh[-2:]

@@ -162,12 +162,12 @@ class FileRP:
             dif_h, dif_w = 1.0, 1.0
 
         # Test width/height values of master_crop. Must be even numbers for FFmpeg byte-stream method.
-        odd_warning = False
+        self.odd_warning = False
         for i in range(2, 4):   # Force width/height parameters to be even (not odd) integers.
             if self.master_crop[i] % 2 > 0:
-                odd_warning = True
+                self.odd_warning = True
                 self.master_crop[i] -= 1
-        if odd_warning:
+        if self.odd_warning:
             warn(f"\n'ScreenshotArea' in {self.path} contains ODD 'width' and/or 'height.\n"
                  f"Adjusting value(s) to next lower EVEN integer. {self.master_crop[2:]}")
 
@@ -176,10 +176,11 @@ class FileRP:
             test.load_images(self.master_crop, [dif_w, dif_h])
 
 
-class SettingsAccess:
+class FileSettings:
     def __init__(self, filename):
+        self._path = resource_path(filename)
         self.cfg = configparser.ConfigParser(inline_comment_prefixes="#")
-        self.cfg.read_file(open(resource_path(filename)))
+        self.cfg.read_file(open(self._path))
 
         def get_pairs(name):
             out = {}
@@ -188,6 +189,9 @@ class SettingsAccess:
                 out[pair[0]] = int(pair[1])
             return out
 
-        self.reset_key = get_pairs("ResetKey")
-        self.video_key = get_pairs("VideoKey")
-        self.verbose = True if self.cfg["Settings"]["PerSecondLog"].strip() == "True" else False
+        self.last_dir = resource_path(self.cfg["Settings"]["LastDirectory"].strip())
+
+    def save(self):
+        self.cfg["Settings"]["LastDirectory"] = self.last_dir
+        with open(self._path, 'w') as file_output:
+            self.cfg.write(file_output)

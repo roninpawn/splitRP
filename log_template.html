@@ -1,0 +1,348 @@
+<html>
+    <head>
+    </head>
+	<style>
+		* {
+			font-family: Arial;
+			vertical-align: top;
+			margin: 0;
+			padding: 5;
+		}
+		b, a, img { padding: 0 }
+		a { text-decoration: none }
+		a, a:visited { color: #33f; }
+		a:hover { color: red }
+		
+		body { 
+			background-color: #333; 
+			padding: 0;
+		}
+		#Wrapper { 
+			background-color: #999;
+			max-width: 1270px;
+			margin: 0 auto;
+			padding: 0 5 10 5;
+			
+		}
+		h1, h2, p, #Header div, #RunDetails div, #VideoDetails div, #Splits h3, h4, h5 { display: inline-block }
+		#Header div { padding: 0 }
+		#Header p {
+			display: block;
+			padding: 0;
+		}
+		#Header h1 { padding-bottom: 0 }
+		#Header h2 { display: block; }
+		#ModerationDetails * { padding-top: 0 }
+		#ModerationDetails div {
+			display: inline-block;
+			padding-top: 0;
+		}
+		#Notes { 
+			display: table;
+			width: 40%;
+			float: right;
+		}
+		#Notes p { 
+			display: table-row;
+			text-align: left;
+			font-weight: bold;
+		}
+		#Notes pre {
+			min-height: 35px;
+			max-height: 115x;
+			text-align: right;
+			overflow-x: auto;
+			font-family: monospace;
+			border: 1px solid #111;
+			background-color: #ccc;
+			padding: 5;
+		}
+		
+		#VideoDetails {
+			float: left;
+			clear: both;
+		}
+		#VideoDetails div h3 { display: inline-block }
+		#VideoDetails div p {
+			display: block;
+			clear: both;
+			text-align: left;
+			padding-bottom: 0;
+		}
+		#VideoDetails div {
+			display: block;
+			clear: right;
+			padding: 0;
+		}
+		#VideoDetails p { text-align: right }
+		
+		#AnalysisDetails {
+			float: right;
+			text-align: right;
+		}
+		#AnalysisDetails h4 {
+			display: block;
+			clear: both;
+		}
+		#AnalysisDetails p { text-align: left }
+		
+		#ScanDetails { clear: both }
+		#ScanDetails h4 {
+			display: block;
+			text-align: right;
+		}
+		#ScanDetails div { display: inline-block }
+		#ScanDetails div.right p { text-align: right }
+		
+		#Header div.right { 
+			text-align: right;
+			font-weight: bold;
+		}
+		h1 {
+			font-size: 48pt;
+			margin-top: -10px;
+			padding-right: 0;
+		}
+		h2 { 
+			font-size: 24pt;
+			clear: left;
+			padding-left: 15px;
+			
+		}
+		h3 {
+			font-size: 19pt;
+			letter-spacing: .05em;
+			padding: 5 15 0 5;
+		}
+		h4 { 
+			font-size: 14pt;
+			padding-top: 15;
+			font-style: italic;
+		}
+		p { padding-left: 20 }
+		div.right { float: right }
+		p.center {
+			display: inline-block;
+			text-align: center;
+			margin: 0 auto;
+		}
+		p.right {
+			float: right;
+			text-align: right;
+		}
+
+		#Splits table {
+			border: solid 1px black;
+			border-spacing: 0;
+			margin: 10 auto;
+			background-color: #fe6;
+			width: 98%;
+			padding: 0;
+		}
+		#Splits tr:first-child { background-color: #fe3 }
+		#Splits tr:nth-child(even) { background-color: #fe8 }
+		#Splits tr { padding: 0 }
+		#Splits td {
+			vertical-align: bottom;
+			text-align: center;
+			font-size: .95em;
+			padding: 0;
+		}
+		#Splits tr:nth-child(n+2) td:nth-child(-n+4) {
+			border-bottom: 1px solid #333;
+		}
+		#Splits tr:first-child td { 
+			font-size: 1.05em;
+			border-top: none;
+			border-bottom: 2px solid black;
+			padding-bottom: 5;
+		}
+		#Splits td:first-child { 
+			text-align: left;
+			padding: 0 0 0 10;
+		}
+		#Splits h3 { padding-bottom: 10px }
+		#Splits h4 {
+			float: left
+			vertical-align: middle;
+			padding: 0;
+		}
+		#Splits td:nth-child(n+2):nth-child(-n+4) { text-align: right; }
+		#Splits tr:first-child h5 { 
+			display: block;
+			padding: 5 0 0 10;
+			text-align: left;
+			font-weight: bold;
+		}
+		#Splits td:nth-child(n+5) {
+			width: 0.1%;
+			border-bottom: 1px solid black;
+		}
+		#Splits tr:not(:first-child) td:nth-child(n+5) {
+			border-left: 1px solid black;
+			background-color: #f00;
+		}
+		#Splits tr:first-child td:nth-child(5) { border-left: 1px solid black; }
+		#Splits tr:first-child td:nth-child(n+5) { 
+			background-color: #ccc;
+			padding: 0;
+		}
+		#Splits tr:first-child td:nth-child(n+6) { # border: none }
+		#Splits td:nth-child(4) { padding-right: 10 }
+		#Splits td p {
+			display: block;
+			font-size: .85em;
+			text-align: right;
+			padding: 0 0 5 0;
+		}
+		#Splits td img { opacity: 1 }
+		#Splits td img:hover { opacity: .7 }
+
+		#Log pre {
+			font-family: monospace;
+			background-color: #111;
+			border: 1px solid #5f5;
+			color: #0a0;
+			width: 75%;
+			margin: 10 auto;
+			padding: 10 10 5 20;
+			line-height: .8em;
+			overflow-x:auto;
+		}
+		#RPfile pre {
+			font-family: monospace;
+			background-color: #777;
+			border: 1px solid #666;
+			color: #222;
+			margin: 10 auto;
+			padding: 10 10 5 20;
+			overflow-x:auto;
+		}
+	</style>
+    <body>
+		
+		<div id="Wrapper">
+			<div id="Header">
+				<h1>SplitRP</h1>
+				<div>
+					<p>%rp_version%</p>
+					<h2>Run Log</h2>
+				</div>
+				<div class="right">
+					%rp_date%</br>
+					%rp_time%
+				</div>
+			</div>
+		
+			
+			<div id="ModerationDetails">
+				<div>
+					<p></br>
+					Submitted by: <b>%rp_runner%</b></br>
+					Moderated by: <b>%rp_moderator%</b>
+					</p>
+				</div>
+				<div id="Notes">
+						<p>Moderator Notes:</p>
+						<pre>%rp_modnotes%</pre>
+				</div>
+			</div>
+	
+						
+			<div id="VideoDetails">
+				<div>
+					<h3><a href="%rp_vidpath%">%rp_vidname%</a></h3>
+					<p>Total Duration: <b>%rp_totalhms%</b> (%rp_totalframes% frames)</p>
+				</div>
+				<p>
+					<b>%rp_resolution%</b> @ <b>%rp_roundframerate%fps</b> (%rp_framerate%fps)
+				</p>
+			</div>
+			
+			<div id="AnalysisDetails">
+				<h4>Using <a href="#RPfile">%rp_patternfile%</a></h4>
+				<p>
+					Screenshot Area: %rp_screenshotarea%</br>
+					Translation: %rp_translation%</br>
+					Rescale Override: %rp_nestedscale%
+				</p>
+			</div>
+			
+			<div id="ScanDetails">
+				<div>
+					<h3>Scan Details</h3>
+					<p>
+						Conducted <b>%rp_totaltests%</b> tests.</br>
+						Dismissed <b>%rp_testsdismissed%</b> by sum-test. <b>(%rp_dismissedpercent%)</b></br>
+						Found <b>%rp_poicount%</b> points of interest (POIs) in <b>%rp_testshms%</b>.
+					</p>
+				</div>
+				<div class="right">
+					<h4>Frames Analyzed</h4>
+					<p>
+						%rp_startframe% - %rp_endframe% (%rp_procframes%)</br>
+						<b>%rp_prochms%</b> duration</br>
+					</p>
+				</div>
+			</div>
+			
+			<div id="Splits">
+				<table>
+					<tr>
+						<td><h3>%rp_splitscount% Splits</h3></td>
+						<td>
+							<h5>RTA:</h5>
+							%rp_totalrtaframes% frames</br>
+							<b>%rp_totalrtahms%</b>
+						</td>
+						<td>
+							<h5>IGT:</h5>
+							%rp_totaligtframes% frames</br>
+							<b>%rp_totaligthms%</b>
+						</td>
+						<td>
+							<h5>WASTE:</h5>
+							%rp_totalwasteframes% frames</br>
+							<b>%rp_totalwastehms%<b>
+						</td>
+						<td>In -1</td><td>In</td><td>Out -1</td><td>Out</td>
+					</tr>
+				%rp_splittop%
+					<tr>
+						<td>
+							<h4>- %rp_splitnum% -</h4>
+							<p>Log events: %rp_eventnums%</p>
+						</td>
+						<td>
+							<p>%rp_sumrtahms% (%rp_sumrtaframes%)</p>
+							RTA: <b>%rp_rtahms% (%rp_rtaframes%)</b>
+						</td>
+						<td>
+							<p>%rp_sumigthms% (%rp_sumigtframes%)</p>
+							IGT: <b>%rp_igthms% (%rp_igtframes%)</b>
+						</td>
+						<td>
+							<p>%rp_sumwastehms% (%rp_sumwasteframes%)</p>
+							WASTE: <b>%rp_wastehms% (%rp_wasteframes%)</b>
+						</td>
+						<td><a href='%rp_inprevlink%'>%rp_inprevthumb%</a></td>
+						<td><a href='%rp_inlink%'>%rp_inthumb%</a></td>
+						<td><a href='%rp_frameprevlink%'>%rp_frameprevthumb%</a></td>
+						<td><a href='%rp_framelink%'>%rp_framethumb%</a></td>
+					</tr>
+				%rp_splitbottom%
+				</table>
+			</div>
+
+			<div id="Log">
+				<h3>Run Log</h3>
+				<pre>%rp_consolelog%</pre>
+			</div>
+			
+			<div id="RPfile">
+				<h3>%rp_patternfile%</h3>
+				<pre>%rp_patterncontents%</pre>
+			</div>
+		</div>
+    </body>
+</html>

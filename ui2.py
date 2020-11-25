@@ -5,6 +5,7 @@ from tkinter import filedialog
 from math import floor
 from sys import exit
 import time
+from os import path
 
 
 def array2tk(array, width, height):
@@ -18,26 +19,32 @@ def time_to_hms(t):
     return f"{time.strftime('%H:%M:%S', time.localtime(t))}.{repr(t).split('.')[1][:3]}"
 
 
-def secs_to_hms(dur):
+def secs_to_hms(dur, hms_style=False):
+    style = [":", ":", ".", ""] if not hms_style else ["h ", "m ", "s ", "ms"]
+
     if dur <= 0:
-        return "0.000"
+        return f"0{style[2]}000{style[3]}"
     else:
         h = floor(dur / 3600)
         dur -= h * 3600
         m, s = divmod(int(dur), 60)
         ms = '{:.03f}'.format(dur)[-3:]
-        out = f"{h}:" if h > 0 else ""
-        out += f"{'{:02d}'.format(m)}:{'{:02d}'.format(s)}.{ms}" if m > 0 else f"{s}.{ms}"
+        out = f"{h}{style[0]}" if h > 0 else ""
+        if m > 0:
+            out += f"{'{:02d}'.format(m)}{style[1]}{'{:02d}'.format(s)}{style[2]}{ms}{style[3]}"
+        else:
+            out += f"{s}{style[2]}{ms}{style[3]}"
         return out
 
 
-def frames_to_hms(f, rate):
-    return secs_to_hms(f / rate)
+def frames_to_hms(f, rate, hms_style=False):
+    return secs_to_hms(f / rate, hms_style)
 
 
 class MainUI(tk.Tk):
-    def __init__(self, engine):
+    def __init__(self, engine, settings):
         self.engine = engine
+        self.settings = settings
         self.mark_in, self.mark_out = 0, 0
         # Insantiate and Configure Window
         super().__init__()
@@ -62,6 +69,10 @@ class MainUI(tk.Tk):
         self.rundata.update()
         topframe.pack(side=tk.TOP, expand=tk.TRUE, fill=tk.BOTH)
 
+        self.notice = tk.Label(self, text="!! In this version: App will freeze during Analysis !!",
+                               font=("", 12), bg='yellow')
+        self.notice.pack(side=tk.TOP)
+
         # --- Timeline ---
         trough_wrap = tk.Frame(self, width=800, padx=5, pady=5, bg='lightblue')
         self.timeline = Timeline(trough_wrap, width=800, height=50, bg='darkgray')
@@ -70,10 +81,10 @@ class MainUI(tk.Tk):
         # --- Labels ---
         self.in_lbl = tk.Label(trough_wrap, text=f"IN: {0}", font=("", 12), bg='lightblue')
         self.out_lbl = tk.Label(trough_wrap, text=f"OUT: {0}", font=("", 12), bg='lightblue')
-        # self.frm_lbl = tk.Label(trough_wrap, text=f"Frame: {0}", font=("", 12), bg='lightblue')
+
         self.in_lbl.pack(side=tk.LEFT)
         self.out_lbl.pack(side=tk.RIGHT)
-        # self.frm_lbl.pack(side=tk.RIGHT)
+
         # --- Button ---
         self.analyze_button = tk.Button(trough_wrap, text="Analyze", pady=5, padx=10, bd=2, state=tk.DISABLED)
         self.analyze_button.pack(side=tk.TOP)
@@ -92,13 +103,15 @@ class MainUI(tk.Tk):
                 self.mark_in = m_out
                 self.mark_out = m_in
 
-            self.in_lbl.configure(text=f'IN: {self.mark_in}')
-            self.out_lbl.configure(text=f'OUT: {self.mark_out}')
+            self.in_lbl.configure(text=f'IN: {frames_to_hms(self.mark_in, self.screen.frame_rate)}')
+            self.out_lbl.configure(text=f'OUT: {frames_to_hms(self.mark_out, self.screen.frame_rate)}')
 
     def openfile(self):
-        filename = filedialog.askopenfilename(initialdir=".", title="Select file",
+        filename = filedialog.askopenfilename(initialdir=self.settings.last_dir, title="Select file",
                                               filetypes=(("MP4s", "*.mp4"), ("all files", "*.*")))
         if filename is not "":
+            self.settings.last_dir = path.split(filename)[0]
+            self.settings.save()
             self.screen.load_video(filename)
             self.rundata.empty()
             self.timeline.reset()
@@ -112,6 +125,7 @@ class MainUI(tk.Tk):
     def analyze(self):
         self.analyze_button.configure(state=tk.DISABLED)
         self.rundata.empty()
+        self.timeline.reset()
         [cursor.place_forget() for name, cursor in self.timeline.cursors.items() if type(name) is int]
         self.timeline.add_cursor("scrubber", self.mark_in)
         self.timeline.cursors["scrubber"].configure(bg='red', width=1)
@@ -119,33 +133,30 @@ class MainUI(tk.Tk):
         self.engine.analyze(self.screen.filename, start=self.mark_in, end=self.mark_out)
         [cursor.enable() for name, cursor in self.timeline.cursors.items() if type(name) is not int]
         self.timeline.cursors["scrubber"].place_forget()
+        self.timeline.add_cursor("in", 0, self.update_inout)
+        self.timeline.add_cursor("out", self.screen.total_frames, self.update_inout)
+        self.update_inout()
         self.analyze_button.configure(state=tk.ACTIVE)
 
     def pop_splits(self, splits, rate):
-        sum_rta, sum_igt, sum_waste = 0, 0, 0
         for split in splits:
-            num, rta, igt, waste, start = split
+            rta_time = frames_to_hms(split.rta, rate)
+            igt_time = frames_to_hms(split.igt, rate)
+            waste_time = frames_to_hms(split.waste, rate)
 
-            sum_rta += rta
-            sum_igt += igt
-            sum_waste += waste
-
-            rta_time = frames_to_hms(rta, rate)
-            igt_time = frames_to_hms(igt, rate)
-            waste_time = frames_to_hms(waste, rate)
-
-            out = f"- {num} -  ({frames_to_hms(sum_rta, rate)} | {frames_to_hms(sum_igt, rate)})\n" \
-                f"          RTA: {rta_time} ({rta})\n" \
-                f"          IGT: {igt_time} ({igt})\n" \
-                f"          WASTE: {waste_time} ({waste})"
+            out = f"- {split.num} -  ({frames_to_hms(split.sum_rta, rate)} | {frames_to_hms(split.sum_igt, rate)})\n" \
+                f"          RTA: {rta_time} ({split.rta})\n" \
+                f"          IGT: {igt_time} ({split.igt})\n" \
+                f"          WASTE: {waste_time} ({split.waste})"
 
             self.add_text_entry(out)
-            self.timeline.add_block(start + waste, start + waste + igt)
+            self.timeline.add_block(split.start + split.waste, split.start + split.rta)
 
+        split = splits[-1]
         out = f"-TOTAL -\n" \
-            f"          RTA: {frames_to_hms(sum_rta, rate)} ({sum_rta})\n" \
-            f"          IGT: {frames_to_hms(sum_igt, rate)} ({sum_igt})\n" \
-            f"          WASTE: {frames_to_hms(sum_waste, rate)} ({sum_waste})"
+            f"          RTA: {frames_to_hms(split.sum_rta, rate)} ({split.sum_rta})\n" \
+            f"          IGT: {frames_to_hms(split.sum_igt, rate)} ({split.sum_igt})\n" \
+            f"          WASTE: {frames_to_hms(split.sum_waste, rate)} ({split.sum_waste})"
 
         self.add_text_entry(out)
 
@@ -174,6 +185,7 @@ class VideoPlayer(tk.Canvas):
             self.filename = filename
             self.video = cv2.VideoCapture(filename)
             self.total_frames = self.video.get(cv2.CAP_PROP_FRAME_COUNT)
+            self.frame_rate = self.video.get(cv2.CAP_PROP_FPS)
 
     def draw_frame(self, frame=0, limit=0, gray=False):
         if self.video is not None:
