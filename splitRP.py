@@ -233,6 +233,10 @@ class Logger:
     def to_html(self):
         html = open("log_template.html", 'r')
 
+        if len(self.splits):
+            totals = [self.splits[-1].sum_rta, self.splits[-1].sum_igt, self.splits[-1].sum_waste]
+        else:
+            totals = [0, 0, 0]
         rate = analyzer.videostream.frame_rate      # Get frame rate for frame-to-time conversions.
         with open(analyzer.rp_path, 'r') as f:      # Store raw text of rp_file for output.
             pattern_str = f.read()
@@ -271,12 +275,12 @@ class Logger:
             "rp_testshms": secs_to_hms(analyzer.time_tests),
 
             "rp_splitscount": len(self.splits),
-            "rp_totalrtahms": frames_to_hms(self.splits[-1].sum_rta, rate, True),
-            "rp_totalrtaframes": self.splits[-1].sum_rta,
-            "rp_totaligthms": frames_to_hms(self.splits[-1].sum_igt, rate, True),
-            "rp_totaligtframes": self.splits[-1].sum_igt,
-            "rp_totalwastehms": frames_to_hms(self.splits[-1].sum_waste, rate, True),
-            "rp_totalwasteframes": self.splits[-1].sum_waste,
+            "rp_totalrtahms": frames_to_hms(totals[0], rate, True),
+            "rp_totalrtaframes": totals[0],
+            "rp_totaligthms": frames_to_hms(totals[1], rate, True),
+            "rp_totaligtframes": totals[1],
+            "rp_totalwastehms": frames_to_hms(totals[2], rate, True),
+            "rp_totalwasteframes": totals[2],
 
             "rp_logpath": resource_path("runlog/"),
             "rp_consolelog": self.full_log,

@@ -152,13 +152,14 @@ class MainUI(tk.Tk):
             self.add_text_entry(out)
             self.timeline.add_block(split.start + split.waste, split.start + split.rta)
 
-        split = splits[-1]
-        out = f"-TOTAL -\n" \
-            f"          RTA: {frames_to_hms(split.sum_rta, rate)} ({split.sum_rta})\n" \
-            f"          IGT: {frames_to_hms(split.sum_igt, rate)} ({split.sum_igt})\n" \
-            f"          WASTE: {frames_to_hms(split.sum_waste, rate)} ({split.sum_waste})"
+        if len(splits):
+            split = splits[-1]
+            out = f"-TOTAL -\n" \
+                f"          RTA: {frames_to_hms(split.sum_rta, rate)} ({split.sum_rta})\n" \
+                f"          IGT: {frames_to_hms(split.sum_igt, rate)} ({split.sum_igt})\n" \
+                f"          WASTE: {frames_to_hms(split.sum_waste, rate)} ({split.sum_waste})"
 
-        self.add_text_entry(out)
+            self.add_text_entry(out)
 
     def add_text_entry(self, text):
         # Text to scroll frame

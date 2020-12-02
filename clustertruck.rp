@@ -1,8 +1,8 @@
 [Settings]
 NativeResolution = 1920x1080
 ScreenshotArea = 416:0,670:517
-# Translate = 62x34
-# ReScale = 1158x650
+# Translate = 63x36
+# ReScale = 1154x648
 ImageDirectory = images/Clustertruck
 
 Tests = Menu Light, Menu Dark, LS Dark, LS Light, LS Dark Drop, LS Light Drop, Level Complete, Pause,
@@ -61,7 +61,7 @@ Crop = 416:470,670:47
 Color = thresh:138
 
 [LS Dark]
-Images = sel4a.png|sel7a.png|sel8b.png|sel9.png
+Images = sel4a.png|sel7a.png|sel8b.png|sel9.png|selhol1.png
 Match = 82
 Unmatch = 70
 Crop = 416:470,670:47
@@ -75,7 +75,7 @@ Crop = 416:470,670:47
 Color = thresh:138
 
 [LS Dark Drop]
-Images = sel4a.png|sel7a.png|sel8b.png|sel9.png
+Images = sel4a.png|sel7a.png|sel8b.png|sel9.png|selhol1.png
 Match = 82
 Unmatch = 100
 Crop = 416:470,670:47
@@ -83,7 +83,7 @@ Color = thresh:55
 
 [Level Complete]
 Images = lc1.png|lc2.png|lc3.png|lc4.png|lc5.png|lc6.png|lc7.png|lc8.png
-Match = 96
+Match = 94.8
 Unmatch = 93
 Crop = 416:0, 670:117
 Resize = .1
