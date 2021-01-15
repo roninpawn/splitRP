@@ -1,8 +1,8 @@
 [Settings]
 NativeResolution = 1920x1080
-ScreenshotArea = 416:0,670:517
-# Translate = 63x36
-# ReScale = 1154x648
+ScreenshotArea = 416:0,670:516
+# Translate = 210x0
+# ReScale = 1098x617
 ImageDirectory = images/Clustertruck
 
 Tests = Menu Light, Menu Dark, LS Dark, LS Light, LS Dark Drop, LS Light Drop, Level Complete, Pause,
@@ -83,8 +83,8 @@ Color = thresh:55
 
 [Level Complete]
 Images = lc1.png|lc2.png|lc3.png|lc4.png|lc5.png|lc6.png|lc7.png|lc8.png
-Match = 94.8
-Unmatch = 93
+Match = 96
+Unmatch = 90
 Crop = 416:0, 670:117
 Resize = .1
 
@@ -107,7 +107,7 @@ NoMatch  = Test Pack 3                      # NoMatch points to a Test Pack to g
 NoMatchAction = Unpause                     # For mp4 video analysis. (Start/Split/Pause/Unpause/Stop)
 
 [Run Select]
-Match = LS Dark, LS Light, Pause
+Match = LS Dark, LS Light
 Unmatch = Pre Run
 Nomatch = Running
 NoMatchAction = Start

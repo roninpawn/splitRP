@@ -6,16 +6,16 @@ import datetime
 import base64
 import webbrowser
 
-splitrp_version = "VMT-0.11.25a"
+splitrp_version = "VMT-1.01.15a"
 
 
 #   ~~~Public Functions~~~
 def poi_test(vid_stream, tests):
-    poi_list = []
-    last_matched_tests = []
+    poi_list = POIList(vid_stream.total_frames)
     prev_frame = []
     dismissed = 0   # Records how many Diff Tests were avoided using Sum Testing.
     total_tests = 0
+    matched_holds = {}
 
     # Process ALL frames assigned to worker
     while True:
@@ -24,7 +24,6 @@ def poi_test(vid_stream, tests):
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
         if not len(prev_frame): prev_frame = frame  # On first frame only, set last_frame = current frame.
-        nomatch_tests = {}
         matched_tests = {}
         last_proc = []
 
@@ -35,6 +34,7 @@ def poi_test(vid_stream, tests):
                 shot = processing(frame, test.color_proc, test.resize, test.crop_area)
                 shot_sum = int(np.sum(shot))
 
+            best = 0.0
             for img, img_sum, max in test.images:      # Test frame against each image in current test.
                 total_tests += 1
                 similarity = 100 * (1 - ((abs(shot_sum - img_sum)) / max))  # Sum Test ( >2x faster than Diff Test.)
@@ -42,31 +42,31 @@ def poi_test(vid_stream, tests):
                 if similarity >= test.match_percent:   # Diff Test - Is the sum of a difference map similar?
                     diff_map = cv2.absdiff(img, shot)  # Composite images into difference map.
                     similarity = 100 * (1 - ((np.sum(diff_map)) / max))
+                    if similarity > best: best = similarity
 
                     if similarity >= test.match_percent:
                         matched_tests[test_name] = similarity     # Generate dict of matching tests for each frame.
                         break
                 else:
                     dismissed += 1
-                # Store no-match percentages exclusively for logging the nearest non-match percentage.
-                if test_name in last_matched_tests:
-                    if test_name not in nomatch_tests.keys() or nomatch_tests[test_name] < similarity:
-                        nomatch_tests[test_name] = similarity
+
+            else:   # If no match found, update previous match with the frame of this no-match, and best similarity.
+                if test_name in matched_holds:
+                    poi_list.link_poi(matched_holds[test_name], frame, prev_frame, test_name, vid_stream.cur_frame, best)
+                    del matched_holds[test_name]
 
             last_proc = [test.color_proc, test.resize, test.crop_area]
 
         # Only record changes: Don't record same test(s) sequentially. Only if different, or if no match after match.
-        if len(matched_tests):
-            if matched_tests.keys() != last_matched_tests:
-                poi_list.append((vid_stream.cur_frame, True, matched_tests, [prev_frame, frame]))
-        elif len(last_matched_tests):   # If no matched tests in wake of matched tests.
-            out_tests = {}
-            for test_name in last_matched_tests:  # Return best match from no_matches.
-                out_tests[test_name] = nomatch_tests[test_name]
-            poi_list.append((vid_stream.cur_frame, False, out_tests, [prev_frame, frame]))
+        for test in matched_tests.keys():
+            if test not in matched_holds:
+                poi_list.add_poi(vid_stream.cur_frame, frame, prev_frame, test, matched_tests[test])
+                matched_holds[test] = vid_stream.cur_frame
 
-        last_matched_tests = matched_tests.keys()
         prev_frame = frame
+
+    for poi in poi_list:
+        print(poi, poi_list[poi][1])
 
     return poi_list, total_tests, dismissed
 
@@ -80,6 +80,42 @@ def square_resize(img, max_dim):
 
 
 #   ~~~Classes~~~
+class POIList:
+    def __init__(self, frame_count):
+        self._store = dict()
+        self._last_frame = frame_count
+
+    def __getitem__(self, item):
+        return self._store[item]
+
+    def __iter__(self):
+        return iter(self._store)
+
+    def __len__(self):
+        return len(self._store)
+
+    def _add_blank(self, frame, img):    # Create "blank" entry on previous frame, if not already populated.
+        if frame >= 0 and frame not in self._store:
+            self._store[frame] = [img, None]
+
+    def add_poi(self, frame, img, prev_img, test, similarity):
+        self._add_blank(frame-1, prev_img)
+        # Add to existing event-dict if this frame already exists, otherwise create "blank" from scratch.
+        if frame not in self._store or self._store[frame][1] is None:
+            self._store[frame] = [img, {test: [similarity, self._last_frame, 0.0]}]
+        else:
+            self._store[frame][1][test] = [similarity, self._last_frame, 0.0]
+
+    def link_poi(self, frame, img, prev_img, test, end_frame, best):
+        self._add_blank(end_frame-1, prev_img)
+        self._add_blank(end_frame, img)
+        self._store[frame][1][test][1] = end_frame
+        self._store[frame][1][test][2] = best
+
+    def fetch_images(self, frame):
+        return [self._store[frame-1][0] if frame > 0 else self._store[frame][0], self._store[frame][0]]
+
+
 class LogEvent:
     def __init__(self, match_cycle, matched, frame, event_name, match_percent, actions_taken, log_images):
         self.name = event_name
@@ -430,31 +466,48 @@ class VideoAnalyzer:
         self.log.to_html()
 
     def _map_splits(self, poi_list, cur_pack):
-        def log_it(matched, percent, actions):
+        def log_it(matched, percent, actions=""):
+            log_images = poi_list.fetch_images(frame)
             self.log.add_log_event(LogEvent(cycle, matched, frame, cur_pack.name, percent, actions, log_images))
             # (un/match cycle, match made, frame number, pack_name, best match %, actions taken, logging images)
 
-        cycle = True
-        cur_match = ""
-        for frame, match, tests, log_images in poi_list:
-            if cycle:
-                if match:  # If match-cycle and match found.
-                    for match_test in cur_pack.match_tests:
-                        if match_test.name in tests.keys():
-                            cur_match = match_test.name
-                            log_it(True, tests[cur_match], cur_pack.match_actions)
-                            cycle = False
-            else:
-                if match:  # If unmatch-cycle and match found.
-                    if cur_pack.unmatch_packs is not None:
-                        for pack in cur_pack.unmatch_packs:
-                            for unmatch_test in pack.match_tests:
-                                if unmatch_test in tests:
-                                    log_it(True, tests[unmatch_test], cur_pack.unmatch_actions)
-                                    cur_pack = pack
+        next_frame, no_match_per, cycle, open_events = 0, 0.0, True, {}
+        for frame in poi_list._store:
+            img, events = poi_list[frame]
 
-                else:  # If unmatch-cycle and no match found.
-                    log_it(False, tests[cur_match], cur_pack.nomatch_actions)
+            # Maintain list of all unclosed match events for use in un-match testing.
+            del_list = []
+            for event in open_events:   # Gather list of to-be-deleted to avoid changing len() during loop.
+                if frame >= open_events[event][1]:
+                    del_list.append(event)
+            for e in del_list: del open_events[e]   # Delete anything that shouldn't be there.
+            if events is not None:                  # Add anything that /should/.
+                for match in events:
+                    open_events[match] = events[match]
+
+            # Core split logic.
+            if frame >= next_frame:     # Skip all logic until at end of current match-cycle.
+                if not cycle and frame == next_frame:   # If un-match cycle AND exiting match...
+                    for pack in cur_pack.unmatch_packs:     # Unmatch can test multiple 'packs' of tests.
+                        for unmatch_test in pack.match_tests:   # Enumerate the tests from the pack.
+                            if unmatch_test.name in open_events:     # And check for matches in that test.
+                                next_frame, no_match_per = open_events[unmatch_test.name][1:]
+                                log_it(True, open_events[unmatch_test.name][0])
+                                cur_pack = pack
+                                break
+                        else: continue
+                        break
+
+                if cycle:
+                    if events is not None:   # If match-cycle...
+                        for match_test in cur_pack.match_tests:
+                            if match_test.name in events:   # and match found...
+                                next_frame, no_match_per = events[match_test.name][1:]
+                                log_it(True, events[match_test.name][0], cur_pack.match_actions)
+                                cycle = False
+                                break
+                else:   # If un-match cycle and no matches found...
+                    log_it(False, no_match_per, cur_pack.nomatch_actions)
                     cycle = True
                     cur_pack = cur_pack.nomatch_pack
 
