@@ -6,7 +6,7 @@ import datetime
 import base64
 import webbrowser
 
-splitrp_version = "VMT-1.01.15a"
+splitrp_version = "VMT-1.02.16a"
 
 
 #   ~~~Public Functions~~~
