@@ -29,11 +29,10 @@ def processing(img, color=None, resize=None, crop=None):
 
 # Classes
 class Test:
-    def __init__(self, name, image_paths, match_per, unmatch_per, crop_area, resize, color_proc):
+    def __init__(self, name, image_paths, match_per, crop_area, resize, color_proc):
         self.name = name
         self.image_paths = image_paths
         self.match_percent = match_per
-        self.unmatch_percent = unmatch_per
         self.crop_area = copy.copy(crop_area)
         self.resize = [resize, resize] if resize is not None and type(resize) is not list else resize
         self.color_proc = color_proc
@@ -123,7 +122,6 @@ class FileRP:
         keys = self.cfg[name].keys()
         imgs = [self.directory + s.strip() for s in self.cfg[name]["Images"].strip().split("|")]
         match = float(self.cfg[name]["Match"].strip())
-        unmatch = float(self.cfg[name]["Unmatch"].strip())
         crop = [int(n) for n in self.cfg[name]["Crop"].replace(" ", "").replace(":", ",").split(",")] if "Crop" \
                                                                                                       in keys else None
         resize = float(self.cfg[name]["Resize"].strip()) if "Resize" in keys else None
@@ -140,7 +138,7 @@ class FileRP:
         else:
             color = None
 
-        return Test(name, imgs, match, unmatch, crop, resize, color)
+        return Test(name, imgs, match, crop, resize, color)
 
     def build_pack(self, name):
         keys = self.cfg[name].keys()

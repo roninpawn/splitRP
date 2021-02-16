@@ -1,8 +1,8 @@
 [Settings]
 NativeResolution = 1920x1080
 ScreenshotArea = 416:0,670:516
-# Translate = 210x0
-# ReScale = 1098x617
+#Translate = 0x0
+#ReScale = 1095x616
 ImageDirectory = images/Clustertruck
 
 Tests = Menu Light, Menu Dark, LS Dark, LS Light, LS Dark Drop, LS Light Drop, Level Complete, Pause,
@@ -16,7 +16,6 @@ StartPack =  Run Select
 [Sample Test]
 Images = img1.png|img2.png|img3.png     # Images in 'ImageDirectory' to process and test.
 Match = 92.5                            # Percent of minimum similarity to match on
-Unmatch = 85                            # Percent, below which, to release the match
 Crop = x : y, width : height            # Screen coordinates as left:top corner, width:height.
 Resize = .2                             # 20% of original
 Color = thresh:127                      # Supports 'gray/grey' for grayscale, and 'thresh:#' for monochrome.
@@ -24,7 +23,6 @@ Color = thresh:127                      # Supports 'gray/grey' for grayscale, an
 [Menu Light]
 Images = menu1.png
 Match = 95
-Unmatch = 100
 Crop = 721:314,479:79
 Resize = .1
 Color = thresh:100
@@ -32,7 +30,6 @@ Color = thresh:100
 [Menu Dark]
 Images = menu2.png
 Match = 95
-Unmatch = 100
 Crop = 721:314,479:79
 Resize = .1
 Color = thresh:200
@@ -40,7 +37,6 @@ Color = thresh:200
 [Main Light]
 Images = main1.png
 Match = 95
-Unmatch = 100
 Crop = 837:307,246:87
 Resize = .1
 Color = thresh:100
@@ -48,7 +44,6 @@ Color = thresh:100
 [Main Dark]
 Images = main2.png
 Match = 95
-Unmatch = 100
 Crop = 837:307,246:87
 Resize = .1
 Color = thresh:200
@@ -56,42 +51,36 @@ Color = thresh:200
 [LS Light]
 Images = sel1.png|sel1b.png
 Match = 70          # 82
-Unmatch = 66        # 70
 Crop = 416:470,670:47
 Color = thresh:138
 
 [LS Dark]
 Images = sel4a.png|sel7a.png|sel8b.png|sel9.png|selhol1.png
 Match = 82
-Unmatch = 70
 Crop = 416:470,670:47
 Color = thresh:55
 
 [LS Light Drop]
 Images = sel1.png|sel1b.png
 Match = 82
-Unmatch = 100
 Crop = 416:470,670:47
 Color = thresh:138
 
 [LS Dark Drop]
 Images = sel4a.png|sel7a.png|sel8b.png|sel9.png|selhol1.png
 Match = 82
-Unmatch = 100
 Crop = 416:470,670:47
 Color = thresh:55
 
 [Level Complete]
 Images = lc1.png|lc2.png|lc3.png|lc4.png|lc5.png|lc6.png|lc7.png|lc8.png
-Match = 96
-Unmatch = 90
-Crop = 416:0, 670:117
+Match = 95
+Crop = 416:65, 670:63
 Resize = .1
 
 [Pause]
 Images = pause_lc.png|pause_lc2.png
 Match = 94
-Unmatch = 93
 Crop = 801:365,317:77
 Resize = .1
 Color = thresh:60
