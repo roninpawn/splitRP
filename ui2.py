@@ -6,6 +6,7 @@ from math import floor
 from sys import exit
 import time
 from os import path
+from find_image import *
 
 
 def array2tk(array, width, height):
@@ -51,6 +52,8 @@ class MainUI(tk.Tk):
         self.configure(bg='darkblue')
         self.minsize(1024, 576)
 
+        self.magic_override = None
+
         # --- Menu Bar ---
         menu = tk.Menu(self)
         self.config(menu=menu)
@@ -87,7 +90,9 @@ class MainUI(tk.Tk):
 
         # --- Button ---
         self.analyze_button = tk.Button(trough_wrap, text="Analyze", pady=5, padx=10, bd=2, state=tk.DISABLED)
+        self.magic_button = tk.Button(self, text="Magic Button", pady=5, padx=10, bd=2, state=tk.DISABLED)
         self.analyze_button.pack(side=tk.TOP)
+        self.magic_button.place(x=600, y=499)
 
         trough_wrap.pack(side=tk.TOP)
 
@@ -121,22 +126,55 @@ class MainUI(tk.Tk):
             self.update_inout()
             self.screen.draw_frame()
             self.analyze_button.configure(state=tk.ACTIVE, command=self.analyze)
+            self.magic_button.configure(state=tk.ACTIVE, command=self.magic_find)
+            self.magic_override = None
 
     def analyze(self):
         self.analyze_button.configure(state=tk.DISABLED)
+        self.magic_button.configure(state=tk.DISABLED)
         self.rundata.empty()
         self.timeline.reset()
         [cursor.place_forget() for name, cursor in self.timeline.cursors.items() if type(name) is int]
         self.timeline.add_cursor("scrubber", self.mark_in)
         self.timeline.cursors["scrubber"].configure(bg='red', width=1)
         [cursor.disable() for cursor in self.timeline.cursors.values()]
-        self.engine.analyze(self.screen.filename, start=self.mark_in, end=self.mark_out)
+        self.update()
+        self.engine.analyze(self.screen.filename, start=self.mark_in, end=self.mark_out, override=self.magic_override)
         [cursor.enable() for name, cursor in self.timeline.cursors.items() if type(name) is not int]
         self.timeline.cursors["scrubber"].place_forget()
         self.timeline.add_cursor("in", 0, self.update_inout)
         self.timeline.add_cursor("out", self.screen.total_frames, self.update_inout)
         self.update_inout()
+        self.magic_button.configure(state=tk.ACTIVE)
         self.analyze_button.configure(state=tk.ACTIVE)
+
+    def magic_find(self):
+        filename = filedialog.askopenfilename(initialdir="./images", title="Select Image to Match",
+                                              filetypes=(("PNGs", "*.png"), ("all files", "*.*")))
+        if filename is not "":
+            self.analyze_button.configure(state=tk.DISABLED)
+            self.magic_button.configure(state=tk.DISABLED)
+            [cursor.disable() for cursor in self.timeline.cursors.values()]
+            self.update()
+
+            img = load_image(filename)
+            self.screen.video.set(cv2.CAP_PROP_POS_FRAMES, self.timeline.selected_frame)
+            has_frames, field = self.screen.video.read()
+            print("Searching image for best match...")
+            percent, x, y, w, h = find_image(img, field)
+            print(f"Best match: {percent} @ xy: {x},{y} wh: {w},{h}")
+
+            self.magic_override = ((x, y), (w, h))
+
+            field = cv2.rectangle(field, (x, y), (x + w, y + h), (255, 255, 80), 2)
+            self.screen.image = array2tk(field, 800, 450)
+            self.screen.create_image(0, 0, anchor=tk.NW, image=self.screen.image)
+            self.screen._last_draw = time.time()
+
+            [cursor.enable() for name, cursor in self.timeline.cursors.items() if type(name) is not int]
+            self.magic_button.configure(state=tk.ACTIVE)
+            self.analyze_button.configure(state=tk.ACTIVE)
+
 
     def pop_splits(self, splits, rate):
         for split in splits:
@@ -209,6 +247,7 @@ class Timeline(Backgroundable):
         self.cursor_width = cursor_width if cursor_width < width else width - 1
         self.cursors = {}
         self.blocks = {}
+        self.selected_frame = 0
         self._player = None
 
     def reset(self):
@@ -236,6 +275,7 @@ class Timeline(Backgroundable):
         x = event.x - cursor.x + cursor.winfo_x()
         new_x, cursor.frame = self.snap(x)
         cursor.place_configure(x=new_x)
+        self.selected_frame = cursor.frame
 
         if self._player is not None:
             self._player.draw_frame(cursor.frame, 1/20)

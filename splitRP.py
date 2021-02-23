@@ -6,7 +6,7 @@ import datetime
 import base64
 import webbrowser
 
-splitrp_version = "VMT-1.02.16a"
+splitrp_version = "VMT-1.02.23a"
 
 
 #   ~~~Public Functions~~~
@@ -22,7 +22,7 @@ def poi_test(vid_stream, tests):
         eof, frame = vid_stream.read()
         if eof: break
 
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
+        #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2BGRA)
         if not len(prev_frame): prev_frame = frame  # On first frame only, set last_frame = current frame.
         matched_tests = {}
         last_proc = []
@@ -323,6 +323,10 @@ class Logger:
             "rp_patterncontents": pattern_str
         }
 
+        if analyzer.override is not None:
+            html_dict["rp_translation"] = analyzer.override[0]
+            html_dict["rp_nestedscale"] = analyzer.override[1]
+
         lines = []
         for line in html:   # Replace all html_dict matches.
             for key, value in html_dict.items():
@@ -396,6 +400,7 @@ class VideoAnalyzer:
         self.start_frame = start
         self.end_frame = end
         self.log = Logger()
+        self.override = None
 
         self.videostream, self.rp_file = None, None
         self.test_count, self.dismissed_count = 0, 0
@@ -405,12 +410,13 @@ class VideoAnalyzer:
         if video_path is not None and rp_path is not None:
             self._analyze(video_path, rp_path, start, end)
 
-    def analyze(self, vid_path=None, rp_path=None, start=None, end=None):
+    def analyze(self, vid_path=None, rp_path=None, start=None, end=None, override=None):
         # Public method to allow maximum calling options at instantiation, afterwards, or mixed.
         if vid_path is not None: self.vid_path = vid_path
         if rp_path is not None: self.rp_path = rp_path
         if start is not None: self.start_frame = start
         if end is not None: self.end_frame = end
+        self.override = override
 
         if self.vid_path is not None and self.rp_path is not None:
             self._analyze(self.vid_path, self.rp_path, self.start_frame, self.end_frame)
@@ -428,7 +434,10 @@ class VideoAnalyzer:
         frame_range = end - start
 
         # Scales stored images to conform either if different resolutions or nested video indicated in .rp file.
-        res = self.videostream.shape() if self.rp_file.rescale_values is None else self.rp_file.rescale_values
+        if self.override is not None:
+            res = self.override[1]
+        else:
+            res = self.videostream.shape() if self.rp_file.rescale_values is None else self.rp_file.rescale_values
         self.rp_file.convert(*res)
         if self.rp_file.odd_warning:
             self.log.print(f"WARNING:\n"
@@ -438,8 +447,12 @@ class VideoAnalyzer:
 
         # Translates FFmpeg video if nested video indicated in .rp file.
         live_crop = self.rp_file.master_crop
-        live_crop[0] += self.rp_file.translation[0]
-        live_crop[1] += self.rp_file.translation[1]
+        if self.override is not None:
+            live_crop[0] += self.override[0][0]
+            live_crop[1] += self.override[0][1]
+        else:
+            live_crop[0] += self.rp_file.translation[0]
+            live_crop[1] += self.rp_file.translation[1]
 
         self.videostream.config(start, end, live_crop)
         self.videostream.open_stream()

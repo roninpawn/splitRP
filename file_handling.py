@@ -56,7 +56,7 @@ class Test:
         self.images = []
         for file in self.image_paths:
             img = cv2.imread(resource_path(file), 1)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
+            #img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
             img = cv2.resize(img, None, None, scale[0], scale[1], cv2.INTER_AREA)
             img = img[area[1]: area[1] + area[3], area[0]: area[0] + area[2]]   # top: top + height, left: left + width
             img = processing(img, self.color_proc, self.resize, self.crop_area)

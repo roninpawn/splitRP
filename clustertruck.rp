@@ -74,7 +74,7 @@ Color = thresh:55
 
 [Level Complete]
 Images = lc1.png|lc2.png|lc3.png|lc4.png|lc5.png|lc6.png|lc7.png|lc8.png
-Match = 95
+Match = 94.5
 Crop = 416:65, 670:63
 Resize = .1
 
