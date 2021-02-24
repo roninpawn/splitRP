@@ -5,8 +5,7 @@ ScreenshotArea = 416:0,670:516
 #ReScale = 1095x616
 ImageDirectory = images/Clustertruck
 
-Tests = Menu Light, Menu Dark, LS Dark, LS Light, LS Dark Drop, LS Light Drop, Level Complete, Pause,
-        Main Light, Main Dark
+Tests = Menu Light, Menu Dark, LS Dark, LS Light, Level Complete, Pause, Main Light, Main Dark
 TestPacks = Run Select, Pre Run, Running, LC Pause, LC Re-Enter, LC Pause Exit, LS Re-Enter, Menu Re-Enter
 StartPack =  Run Select
 
@@ -50,7 +49,7 @@ Color = thresh:200
 
 [LS Light]
 Images = sel1.png|sel1b.png
-Match = 70          # 82
+Match = 82          # 70
 Crop = 416:470,670:47
 Color = thresh:138
 
@@ -60,21 +59,9 @@ Match = 82
 Crop = 416:470,670:47
 Color = thresh:55
 
-[LS Light Drop]
-Images = sel1.png|sel1b.png
-Match = 82
-Crop = 416:470,670:47
-Color = thresh:138
-
-[LS Dark Drop]
-Images = sel4a.png|sel7a.png|sel8b.png|sel9.png|selhol1.png
-Match = 82
-Crop = 416:470,670:47
-Color = thresh:55
-
 [Level Complete]
 Images = lc1.png|lc2.png|lc3.png|lc4.png|lc5.png|lc6.png|lc7.png|lc8.png
-Match = 94.5
+Match = 92.7
 Crop = 416:65, 670:63
 Resize = .1
 
@@ -96,13 +83,13 @@ NoMatch  = Test Pack 3                      # NoMatch points to a Test Pack to g
 NoMatchAction = Unpause                     # For mp4 video analysis. (Start/Split/Pause/Unpause/Stop)
 
 [Run Select]
-Match = LS Dark, LS Light
+Match = LS Dark, LS Light, Pause
 Unmatch = Pre Run
 Nomatch = Running
 NoMatchAction = Start
 
 [Pre Run]
-Match = Menu Dark, Menu Light, LS Dark, LS Light
+Match = Menu Dark, Menu Light
 Unmatch = Run Select
 NoMatch = Run Select
 
@@ -125,7 +112,7 @@ NoMatch = Running
 NoMatchAction = Unpause
 
 [LC Pause Exit]
-Match = Main Light, Main Dark, LS Dark Drop, LS Light Drop
+Match = Main Light, Main Dark, LS Dark, LS Light
 NoMatch = LS Re-Enter
 
 [Menu Re-Enter]

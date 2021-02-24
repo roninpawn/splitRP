@@ -501,6 +501,11 @@ class VideoAnalyzer:
             # Core split logic.
             if frame >= next_frame:     # Skip all logic until at end of current match-cycle.
                 if not cycle and frame == next_frame:   # If un-match cycle AND exiting match...
+                    for match_test in cur_pack.match_tests:
+                        if match_test.name in open_events:
+                            next_frame, no_match_per = open_events[match_test.name][1:]
+                            break
+                    if next_frame > frame: continue
                     for pack in cur_pack.unmatch_packs:     # Unmatch can test multiple 'packs' of tests.
                         for unmatch_test in pack.match_tests:   # Enumerate the tests from the pack.
                             if unmatch_test.name in open_events:     # And check for matches in that test.
