@@ -16,7 +16,7 @@ class VideoStream:
         probe = ffmpeg.probe(self.path)
         inspect = next((stream for stream in probe['streams'] if stream['codec_type'] == 'video'), None)
 
-        rate = [float(s) for s in inspect['r_frame_rate'].split("/")]
+        rate = [float(s) for s in inspect['avg_frame_rate'].split("/")]
         self.frame_rate = rate[0] / rate[1]
         self.total_frames = int(inspect['nb_frames'])
         self.end = self.total_frames if end is None else end
